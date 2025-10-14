@@ -5,6 +5,7 @@ switch:
     sudo darwin-rebuild switch --flake . --verbose
 
 update:
+    devenv update
     nix flake update --commit-lock-file
 
 # List all secrets in the flake
