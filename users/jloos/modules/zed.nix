@@ -1,79 +1,98 @@
 { pkgs, ... }:
 {
-
-  home.packages = with pkgs; [ zed-editor ];
-
   # https://zed.dev/docs/configuring-zed
-  xdg.configFile."zed/settings.json".text = builtins.toJSON {
-    # UI and theme settings
-    theme = {
-      mode = "system";
-      light = "One Light";
-      dark = "One Dark";
-    };
-    base_keymap = "JetBrains";
+  programs.zed-editor = {
+    enable = true;
 
-    # Font settings
-    ui_font_size = 16;
-    ui_font_features = {
-      calt = true;
-    };
-    buffer_font_size = 12;
-    buffer_font_fallbacks = [ "JetBrainsMono Nerd Font" ];
-    terminal = {
-      font_family = "JetBrainsMono Nerd Font";
-      line_height = "standard";
-      font_size = 14;
-    };
+    # Make LSP binaries and formatters available to Zed
+    extraPackages = with pkgs; [
+      nixd
+      nixfmt-rfc-style
+    ];
 
-    # Features
-    features = {
-      edit_prediction_provider = "zed";
-    };
+    extensions = [
+      "just-ls"
+      "just"
+      "nix"
+      "terraform"
+      "dockerfile"
+      "toml"
+      "sql"
+      "zed-log"
+      "kotlin"
+    ];
 
-    # Assistant
-    assistant = {
-      default_model = {
-        provider = "anthropic";
-        model = "claude-opus-4-latest";
+    userSettings = {
+      # UI and theme settings
+      theme = {
+        mode = "system";
+        light = "One Light";
+        dark = "One Dark";
       };
-      version = "2";
-    };
+      base_keymap = "JetBrains";
 
-    # Language-specific settings
-    languages = {
-      Nix = {
-        language_servers = [
-          pkgs.nixd
-          "!nil"
-        ];
+      # Font settings
+      ui_font_size = 16;
+      ui_font_features = {
+        calt = true;
       };
-      JavaScript = {
-        format_on_save = "off";
+      buffer_font_size = 12;
+      buffer_font_fallbacks = [ "JetBrainsMono Nerd Font" ];
+      terminal = {
+        font_family = "JetBrainsMono Nerd Font";
+        line_height = "standard";
+        font_size = 14;
       };
-    };
 
-    # LSP configurations
-    lsp = {
-      nixd = {
-        binary = {
-          path_lookup = true;
+      # Features
+      features = {
+        edit_prediction_provider = "zed";
+      };
+
+      # Assistant
+      assistant = {
+        default_model = {
+          provider = "anthropic";
+          model = "claude-sonet-4.5-latest";
         };
-        settings = {
-          formatting = {
-            command = [ pkgs.nixfmt-rfc-style ];
+        version = "2";
+      };
+
+      # Language-specific settings
+      languages = {
+        Nix = {
+          language_servers = [
+            "nixd"
+            "!nil"
+          ];
+        };
+        JavaScript = {
+          format_on_save = "off";
+        };
+      };
+
+      # LSP configurations
+      lsp = {
+        nixd = {
+          binary = {
+            path_lookup = true;
+          };
+          settings = {
+            formatting = {
+              command = [ "nixfmt" ];
+            };
           };
         };
-      };
-      terraform = {
-        binary = {
-          path_lookup = true;
+        terraform = {
+          binary = {
+            path_lookup = true;
+          };
         };
-      };
-      tinymist = {
-        initialization_options = {
-          exportPdf = "onSave";
-          outputPath = "$root/$name";
+        tinymist = {
+          initialization_options = {
+            exportPdf = "onSave";
+            outputPath = "$root/$name";
+          };
         };
       };
     };
