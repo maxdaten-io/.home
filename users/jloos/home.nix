@@ -127,6 +127,9 @@ in
       # Other tools
       stress
       speedtest-cli
+
+      # MCP
+      terraform-mcp-server
     ]
     ++ lib.optionals (pkgs.stdenv.isDarwin) darwinPackages
     ++ lib.optionals (!headless) guiPackages;
