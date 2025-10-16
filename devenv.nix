@@ -11,7 +11,7 @@
     ssh-to-age
 
     just
-
+    nodejs_latest
   ];
 
   # Claude Code MCP server configuration
