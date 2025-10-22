@@ -20,7 +20,8 @@ let
       includes = [ "*.json" ];
       excludes = [
         ".vscode/*.json"
-        "secrets"
+        "secrets/*.yaml"
+        "secrets.yaml"
       ];
     };
 
@@ -35,6 +36,7 @@ let
       excludes = [
         ".sops.yaml"
         "secrets/*.yaml"
+        "secrets.yaml"
       ];
     };
 
