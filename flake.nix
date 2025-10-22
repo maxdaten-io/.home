@@ -2,8 +2,6 @@
   description = "Personal NixOS configuration";
 
   inputs = {
-    determinate.url = "https://flakehub.com/f/DeterminateSystems/determinate/0";
-
     # Nix Derivations
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
 
