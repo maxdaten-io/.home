@@ -29,6 +29,8 @@
     substituters = https://cache.nixos.org/ https://maxdaten-io.cachix.org
     trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= maxdaten-io.cachix.org-1:ZDDi/8gGLSeUEU9JST6uXDcQfNp2VZzccmjUljPHHS8=
     trusted-users = root @admin
+
+    eval-cores = 0
   '';
 
   # init nix in zsh & fish
