@@ -3,7 +3,7 @@ name: Update Flake Inputs
 on:
   workflow_dispatch: # Allow manual trigger
   schedule:
-    - cron: '0 0 * * 0' # Weekly on Sunday at midnight UTC
+    - cron: "0 0 * * 0" # Weekly on Sunday at midnight UTC
 
 jobs:
   update:
@@ -20,7 +20,7 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@v14
 
       - name: Setup Magic Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@v8
+        uses: DeterminateSystems/magic-nix-cache-action@v13
 
       - name: Update flake lock
         uses: DeterminateSystems/update-flake-lock@v24

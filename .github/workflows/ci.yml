@@ -26,7 +26,7 @@ jobs:
             experimental-features = nix-command flakes
 
       - name: Setup Magic Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@v8
+        uses: DeterminateSystems/magic-nix-cache-action@v13
 
       - name: Check flake
         run: nix flake check --all-systems --show-trace
@@ -45,7 +45,7 @@ jobs:
             experimental-features = nix-command flakes
 
       - name: Setup Magic Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@v8
+        uses: DeterminateSystems/magic-nix-cache-action@v13
 
       - name: Install devenv.sh
         run: nix profile install nixpkgs#devenv
