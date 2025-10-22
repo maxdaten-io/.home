@@ -9,6 +9,9 @@ update:
     git add devenv.lock && git commit -m "chore(devenv): Update devenv.lock" || true
     nix flake update --commit-lock-file
 
+# Update flake inputs and switch in one command
+update-switch: update switch
+
 # List all secrets in the flake
 sops-list-secrets:
     find . -type f \
