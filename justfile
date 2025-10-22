@@ -6,6 +6,7 @@ switch:
 
 update:
     devenv update
+    git add devenv.lock && git commit -m "chore(devenv): Update devenv.lock" || true
     nix flake update --commit-lock-file
 
 # List all secrets in the flake
