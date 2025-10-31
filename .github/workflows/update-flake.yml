@@ -36,8 +36,11 @@ jobs:
           title: "chore: Update flake inputs"
           branch: update-flake-lock
           labels: dependencies,automated
+          draft: always-true
           body: |
             Automated update of flake inputs and devenv.
 
             - Updated devenv
             - Updated flake.lock
+
+            **Note:** This PR is created as a draft. Click "Ready for review" to trigger CI checks.
