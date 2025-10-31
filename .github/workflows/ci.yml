@@ -8,8 +8,7 @@ on:
     branches: [update-flake-lock]
 
 permissions:
-  id-token: "write"
-  contents: "read"
+  contents: read
 
 jobs:
   check-flake:
