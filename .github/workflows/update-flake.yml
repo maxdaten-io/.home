@@ -5,6 +5,10 @@ on:
   schedule:
     - cron: "0 0 * * 0" # Weekly on Sunday at midnight UTC
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   update:
     name: Update Flake Lock
@@ -19,10 +23,21 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
 
+      - name: Update devenv
+        run: nix run nixpkgs#devenv -- update
+
       - name: Update flake lock
-        uses: DeterminateSystems/update-flake-lock@main
+        run: nix flake update
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
         with:
-          pr-title: "chore: Update flake inputs"
-          pr-labels: dependencies,automated
-          commit-msg: "chore: Update flake lock"
+          commit-message: "chore: Update flake lock and devenv"
+          title: "chore: Update flake inputs"
           branch: update-flake-lock
+          labels: dependencies,automated
+          body: |
+            Automated update of flake inputs and devenv.
+
+            - Updated devenv
+            - Updated flake.lock
