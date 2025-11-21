@@ -13,7 +13,7 @@ in
   flake.darwinConfigurations = {
     # scutil --get LocalHostName
     "Jan-Philips-MacBook-Pro" = darwinSystem {
-      system = "aarch64-darwin";
+      stdenv.hostPlatform.system = "aarch64-darwin";
       inherit specialArgs;
 
       modules = [
@@ -33,40 +33,36 @@ in
     };
   };
 
-  flake.nixosConfigurations =
-    let
-      system = "aarch64-linux";
-    in
-    {
-      # minimal pi for bootstrapping and quick testing
-      pi-minimal = nixosSystem {
-        inherit system specialArgs;
+  flake.nixosConfigurations = {
+    # minimal pi for bootstrapping and quick testing
+    pi-minimal = nixosSystem {
+      inherit system specialArgs;
 
-        modules = [
-          inputs.raspberry-pi-nix.nixosModules.raspberry-pi
-          ./pi/pi-config.nix
-        ];
-      };
-
-      # full pi configuration
-      pi = nixosSystem {
-        inherit system specialArgs;
-
-        modules = [
-          inputs.raspberry-pi-nix.nixosModules.raspberry-pi
-          ./pi
-          inputs.home-manager.nixosModules.home-manager
-          {
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = true;
-            home-manager.extraSpecialArgs = specialArgs // {
-              headless = true;
-            };
-          }
-          (import ../users/jloos)
-        ];
-      };
+      modules = [
+        inputs.raspberry-pi-nix.nixosModules.raspberry-pi
+        ./pi/pi-config.nix
+      ];
     };
+
+    # full pi configuration
+    pi = nixosSystem {
+      inherit system specialArgs;
+
+      modules = [
+        inputs.raspberry-pi-nix.nixosModules.raspberry-pi
+        ./pi
+        inputs.home-manager.nixosModules.home-manager
+        {
+          home-manager.useGlobalPkgs = true;
+          home-manager.useUserPackages = true;
+          home-manager.extraSpecialArgs = specialArgs // {
+            headless = true;
+          };
+        }
+        (import ../users/jloos)
+      ];
+    };
+  };
 
   imports = [
     ./pi/flake-module.nix
