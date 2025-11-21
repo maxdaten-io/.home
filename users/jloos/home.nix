@@ -146,7 +146,7 @@ in
     # truecolor = !isDarwin;
   };
 
-  services.ollama.enable = true;
+  services.ollama.enable = false;
 
   home.sessionVariables = {
     EDITOR = if pkgs.stdenv.isDarwin then "zeditor --new --wait" else "vim";
