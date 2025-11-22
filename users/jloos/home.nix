@@ -30,6 +30,9 @@ let
     nerd-fonts.fira-mono
     nerd-fonts.fira-code
     nerd-fonts.sauce-code-pro
+
+    # Applications
+    lens
   ];
 
 in
