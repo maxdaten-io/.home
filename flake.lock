@@ -241,11 +241,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1763748372,
-        "narHash": "sha256-AUc78Qv3sWir0hvbmfXoZ7Jzq9VVL97l+sP9Jgms+JU=",
+        "lastModified": 1763845215,
+        "narHash": "sha256-8W4YByiS3zxwcdDR2sABm1nUCSOEXJwdY/XddRTVjWM=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "d10a9b16b2a3ee28433f3d1c603f4e9f1fecb8e1",
+        "rev": "9a5042a88caea9b729a1d3bc981069159de4fc49",
         "type": "github"
       },
       "original": {
@@ -274,11 +274,11 @@
     "homebrew-cask": {
       "flake": false,
       "locked": {
-        "lastModified": 1763764300,
-        "narHash": "sha256-FqbhToxxvd9uWzcYZTOznfxm51J9LFCGvkLxan9qUo0=",
+        "lastModified": 1763849901,
+        "narHash": "sha256-UsSVAByh8eaeMOYsYFjs1YWkc+ZdSM0A6hjVZ9pdGWM=",
         "owner": "homebrew",
         "repo": "homebrew-cask",
-        "rev": "c6df81d90f75fecb063dd64bbd7ac26b1b554196",
+        "rev": "37812397d37ef02259a56328f54241d5874499b4",
         "type": "github"
       },
       "original": {
@@ -290,11 +290,11 @@
     "homebrew-core": {
       "flake": false,
       "locked": {
-        "lastModified": 1763768038,
-        "narHash": "sha256-ibRzfhhG78DAJoXklYBinIu9vr7KFAGYMm6YC7BanG4=",
+        "lastModified": 1763848937,
+        "narHash": "sha256-yviz7YbCBmz+0K8n9hPt6xiSpltpAXKrIZoTM4FT9Qg=",
         "owner": "homebrew",
         "repo": "homebrew-core",
-        "rev": "18c894b451451660e81f80c243f1f0933d17e889",
+        "rev": "b41623a07c237b75c8ff2b29b246559f372ae6ee",
         "type": "github"
       },
       "original": {
@@ -517,12 +517,12 @@
     },
     "nixpkgs_3": {
       "locked": {
-        "lastModified": 1763421233,
-        "narHash": "sha256-Stk9ZYRkGrnnpyJ4eqt9eQtdFWRRIvMxpNRf4sIegnw=",
-        "rev": "89c2b2330e733d6cdb5eae7b899326930c2c0648",
-        "revCount": 897910,
+        "lastModified": 1763678758,
+        "narHash": "sha256-+hBiJ+kG5IoffUOdlANKFflTT5nO3FrrR2CA3178Y5s=",
+        "rev": "117cc7f94e8072499b0a7aa4c52084fa4e11cc9b",
+        "revCount": 899548,
         "type": "tarball",
-        "url": "https://api.flakehub.com/f/pinned/NixOS/nixpkgs/0.1.897910%2Brev-89c2b2330e733d6cdb5eae7b899326930c2c0648/019a9888-31f2-7667-abe4-5a1c43721ef0/source.tar.gz"
+        "url": "https://api.flakehub.com/f/pinned/NixOS/nixpkgs/0.1.899548%2Brev-117cc7f94e8072499b0a7aa4c52084fa4e11cc9b/019aacbc-fc17-7526-900a-ac930cc4bc47/source.tar.gz"
       },
       "original": {
         "type": "tarball",
