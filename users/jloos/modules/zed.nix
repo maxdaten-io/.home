@@ -49,13 +49,12 @@
         edit_prediction_provider = "zed";
       };
 
-      # Assistant
-      assistant = {
+      # Agent (replaces assistant in new format)
+      agent = {
         default_model = {
           provider = "anthropic";
           model = "claude-sonet-4.5-latest";
         };
-        version = "2";
       };
 
       # Language-specific settings
@@ -94,6 +93,19 @@
             outputPath = "$root/$name";
           };
         };
+      };
+
+      # Auto-install extensions
+      auto_install_extensions = {
+        dockerfile = true;
+        just = true;
+        just-ls = true;
+        kotlin = true;
+        nix = true;
+        sql = true;
+        terraform = true;
+        toml = true;
+        zed-log = true;
       };
     };
   };
