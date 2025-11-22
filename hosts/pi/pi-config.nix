@@ -2,6 +2,7 @@
 
 {
   system.stateVersion = "24.11";
+  nixpkgs.hostPlatform.system = "aarch64-linux";
 
   raspberry-pi-nix.board = "bcm2712";
   raspberry-pi-nix.libcamera-overlay.enable = false;
