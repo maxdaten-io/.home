@@ -13,7 +13,6 @@ in
   flake.darwinConfigurations = {
     # scutil --get LocalHostName
     "Jan-Philips-MacBook-Pro" = darwinSystem {
-      stdenv.hostPlatform.system = "aarch64-darwin";
       inherit specialArgs;
 
       modules = [
@@ -36,7 +35,7 @@ in
   flake.nixosConfigurations = {
     # minimal pi for bootstrapping and quick testing
     pi-minimal = nixosSystem {
-      inherit system specialArgs;
+      inherit specialArgs;
 
       modules = [
         inputs.raspberry-pi-nix.nixosModules.raspberry-pi
@@ -46,7 +45,7 @@ in
 
     # full pi configuration
     pi = nixosSystem {
-      inherit system specialArgs;
+      inherit specialArgs;
 
       modules = [
         inputs.raspberry-pi-nix.nixosModules.raspberry-pi
