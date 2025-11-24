@@ -3,6 +3,25 @@ default:
 
 switch:
     sudo darwin-rebuild switch --flake . --verbose
+    @just _prompt-commit
+
+_prompt-commit:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo ""
+    echo "Darwin rebuild complete!"
+    echo ""
+    if ! git diff --quiet || ! git diff --cached --quiet; then
+        echo "Changes detected. Would you like to commit them? (y/n)"
+        read -r answer
+        if [ "$answer" = "y" ]; then
+            git add -A
+            git commit -m "chore: Update darwin configuration"
+            echo "Changes committed!"
+        else
+            echo "Skipping commit"
+        fi
+    fi
 
 update:
     devenv update

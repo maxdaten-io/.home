@@ -14,7 +14,6 @@ let
 
   darwinPackages = with pkgs; [
     terminal-notifier
-    iterm2
     # wireshark # broken on darwin https://github.com/NixOS/nixpkgs/issues/362416
   ];
 
