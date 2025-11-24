@@ -1,5 +1,5 @@
 default:
-    echo 'Hello, world!'
+    update-switch
 
 switch:
     sudo darwin-rebuild switch --flake . --verbose
@@ -29,7 +29,7 @@ update:
     nix flake update --commit-lock-file
 
 # Update flake inputs and switch in one command
-update-switch: update switch
+update-switch: update fmt switch
 
 # List all secrets in the flake
 sops-list-secrets:
