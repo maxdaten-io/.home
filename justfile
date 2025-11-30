@@ -38,11 +38,11 @@ sops-list-secrets:
 
 # Format all files
 fmt:
-    nix fmt
+    treefmt
 
 # Check formatting without changing files
 check-fmt:
-    nix fmt -- --fail-on-change
+    treefmt --fail-on-change
 
 run-hooks:
     pre-commit run --verbose
