@@ -1,6 +1,6 @@
 allowUnfree: true
 inputs:
   nixpkgs:
-    url: github:cachix/devenv-nixpkgs/rolling
+    url: github:NixOS/nixpkgs/nixpkgs-unstable
   treefmt-nix:
     url: github:numtide/treefmt-nix

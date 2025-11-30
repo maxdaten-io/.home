@@ -65,7 +65,7 @@ in
     ./modules/ghostty.nix
     ./modules/zed.nix
     ./modules/zoxide.nix
-    ./modules/claude-code.nix
+    # ./modules/claude-code.nix
   ];
 
   programs.nix-index-database.comma.enable = true;
@@ -96,6 +96,7 @@ in
       rename
       tldr
       gemini-cli
+      claude-code
       #> ERROR: Could not find a version that satisfies the requirement keyring<24.0,>=23.4 (from yubikey-manager) (from versions: none)
       #> ERROR: No matching distribution found for keyring<24.0,>=23.4
       # yubikey-manager
