@@ -12,6 +12,7 @@
 
       npmDepsHash = "sha256-Hvix7YySZ0Z88deeDA4rHrEAUhzhUqPL+nPJJ46JncQ=";
 
+      # Get with `npm install @anthropic-ai/claude-code --package-lock-only`
       postPatch = ''
         cp ${./claude-code/package-lock.json} package-lock.json
       '';

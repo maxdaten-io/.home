@@ -1,6 +1,5 @@
 {
   pkgs,
-  inputs,
   config,
   ...
 }:
@@ -22,7 +21,7 @@
 
     nixfmt-rfc-style
     nixd
-    inputs.devenv.packages.aarch64-darwin.devenv
+    devenv
     direnv
   ];
 

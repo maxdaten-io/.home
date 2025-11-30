@@ -51,15 +51,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Development environment
-    devenv.url = "github:cachix/devenv/6880d8946d4a02b1fd2c74f2b6a342f45034b483";
-    nix2container = {
-      url = "github:nlewo/nix2container";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    vscode-server.url = "github:msteen/nixos-vscode-server";
-    nil.url = "github:oxalica/nil";
-
     # Code formatting
     treefmt-nix.url = "github:numtide/treefmt-nix";
 
