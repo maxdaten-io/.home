@@ -155,8 +155,5 @@ in
 
   home.sessionVariables = {
     EDITOR = if pkgs.stdenv.isDarwin then "zeditor --new --wait" else "vim";
-    # Use system Nix (Determinate Nix) for devenv to avoid "unknown setting 'eval-cores'" warning
-    # devenv bundles upstream Nix which doesn't recognize Determinate-specific settings
-    DEVENV_NIX = "/nix/var/nix/profiles/default/bin/nix";
   };
 }
