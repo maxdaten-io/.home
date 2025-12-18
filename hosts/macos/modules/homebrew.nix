@@ -17,9 +17,17 @@
   homebrew = {
     enable = true;
 
-    onActivation.cleanup = "zap";
-
     taps = builtins.attrNames config.nix-homebrew.taps;
+
+    global = {
+      brewfile = true;
+    };
+
+    onActivation = {
+      autoUpdate = true;
+      cleanup = "zap";
+      upgrade = true;
+    };
 
     casks = [
       "keyclu"
