@@ -23,6 +23,7 @@
     nixd
     devenv
     direnv
+    container
   ];
 
   nix.enable = false;
