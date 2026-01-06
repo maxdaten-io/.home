@@ -1,8 +1,21 @@
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
+let
+  skillsDir = ./claude-code/skills;
+
+  # Discover all skill directories (folders containing SKILL.md)
+  skillDirs = lib.filterAttrs (
+    name: type: type == "directory" && builtins.pathExists (skillsDir + "/${name}/SKILL.md")
+  ) (builtins.readDir skillsDir);
+
+  # Generate home.file entries for each skill
+  skillFiles = lib.mapAttrs' (
+    name: _:
+    lib.nameValuePair ".claude/skills/${name}/SKILL.md" { source = skillsDir + "/${name}/SKILL.md"; }
+  ) skillDirs;
+in
 {
-  # Deploy Claude Code skills via Home Manager
-  home.file.".claude/skills/design-principles/SKILL.md".source =
-    ./claude-code/skills/design-principles/SKILL.md;
+  # Deploy all Claude Code skills via Home Manager
+  home.file = skillFiles;
 
   home.packages = with pkgs; [
     (pkgs.buildNpmPackage rec {
