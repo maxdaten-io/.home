@@ -12,7 +12,6 @@
 
     just
     nodejs_latest
-    python3 # Required for mdformat in treefmt
   ];
 
   # Claude Code MCP server configuration

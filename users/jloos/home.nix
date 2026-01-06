@@ -74,6 +74,7 @@ in
     with pkgs;
     [
       direnv
+      python3
 
       gnupg
       htop
