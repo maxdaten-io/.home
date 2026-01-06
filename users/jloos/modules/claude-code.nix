@@ -1,5 +1,9 @@
 { pkgs, ... }:
 {
+  # Deploy Claude Code skills via Home Manager
+  home.file.".claude/skills/design-principles/SKILL.md".source =
+    ./claude-code/skills/design-principles/SKILL.md;
+
   home.packages = with pkgs; [
     (pkgs.buildNpmPackage rec {
       pname = "claude-code";
