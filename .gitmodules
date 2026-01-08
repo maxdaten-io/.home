@@ -1,3 +1,3 @@
-[submodule "users/jloos/modules/claude-code/plugins"]
-	path = users/jloos/modules/claude-code/plugins
+[submodule "claude-plugins"]
+	path = claude-plugins
 	url = git@github.com:maxdaten-io/claude-plugins.git
