@@ -1,23 +1,44 @@
 { pkgs, lib, ... }:
 let
   skillsDir = ./claude-code/skills;
+  pluginsSkillsDir = ./claude-code/plugins/skills;
   commandsDir = ./claude-code/commands;
 
   # Discover all skill directories (folders containing SKILL.md)
-  skillDirs = lib.filterAttrs (
+  localSkillDirs = lib.filterAttrs (
     name: type: type == "directory" && builtins.pathExists (skillsDir + "/${name}/SKILL.md")
   ) (builtins.readDir skillsDir);
+
+  # Discover skills from plugins submodule (if it exists)
+  pluginSkillDirs =
+    if builtins.pathExists pluginsSkillsDir then
+      lib.filterAttrs (
+        name: type: type == "directory" && builtins.pathExists (pluginsSkillsDir + "/${name}/SKILL.md")
+      ) (builtins.readDir pluginsSkillsDir)
+    else
+      { };
 
   # Discover all command files (*.md files in commands directory)
   commandFiles' = lib.filterAttrs (name: type: type == "regular" && lib.hasSuffix ".md" name) (
     builtins.readDir commandsDir
   );
 
-  # Generate home.file entries for each skill
-  skillFiles = lib.mapAttrs' (
+  # Generate home.file entries for local skills
+  localSkillFiles = lib.mapAttrs' (
     name: _:
     lib.nameValuePair ".claude/skills/${name}/SKILL.md" { source = skillsDir + "/${name}/SKILL.md"; }
-  ) skillDirs;
+  ) localSkillDirs;
+
+  # Generate home.file entries for plugin skills
+  pluginSkillFiles = lib.mapAttrs' (
+    name: _:
+    lib.nameValuePair ".claude/skills/${name}/SKILL.md" {
+      source = pluginsSkillsDir + "/${name}/SKILL.md";
+    }
+  ) pluginSkillDirs;
+
+  # Merge all skill files (plugins can override local skills with same name)
+  skillFiles = localSkillFiles // pluginSkillFiles;
 
   # Generate home.file entries for each command
   commandFiles = lib.mapAttrs' (
