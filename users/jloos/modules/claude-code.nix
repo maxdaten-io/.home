@@ -1,21 +1,5 @@
-{ pkgs, lib, ... }:
-let
-  commandsDir = ./claude-code/commands;
-
-  # Discover all command files (*.md files in commands directory)
-  commandFiles' = lib.filterAttrs (name: type: type == "regular" && lib.hasSuffix ".md" name) (
-    builtins.readDir commandsDir
-  );
-
-  # Generate home.file entries for each command
-  commandFiles = lib.mapAttrs' (
-    name: _: lib.nameValuePair ".claude/commands/${name}" { source = commandsDir + "/${name}"; }
-  ) commandFiles';
-in
+{ pkgs, ... }:
 {
-  # Deploy Claude Code commands via Home Manager
-  home.file = commandFiles;
-
   home.packages = with pkgs; [
     (pkgs.buildNpmPackage rec {
       pname = "claude-code";
