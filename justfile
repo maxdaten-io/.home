@@ -46,3 +46,7 @@ check-fmt:
 
 run-hooks:
     pre-commit run --verbose
+
+# Update claude-code to a specific version (or latest if no version given)
+update-claude-code version="":
+    ./scripts/update-claude-code.sh {{version}}
