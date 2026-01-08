@@ -66,6 +66,7 @@ in
     ./modules/zed.nix
     ./modules/zoxide.nix
     ./modules/claude-code.nix
+    ./modules/career-coach.nix
   ];
 
   programs.nix-index-database.comma.enable = true;
