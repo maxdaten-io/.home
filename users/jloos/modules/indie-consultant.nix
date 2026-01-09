@@ -1,6 +1,6 @@
 { ... }:
 {
-  home.file.".career/config.yaml".text = ''
+  home.file.".indie-consultant/config.yaml".text = ''
     profiles:
       linkedin: https://www.linkedin.com/in/maxdaten/
       github_personal: https://github.com/MaxDaten
