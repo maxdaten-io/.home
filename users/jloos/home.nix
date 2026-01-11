@@ -88,6 +88,7 @@ in
 
       # shell tools
       ripgrep
+      bats
       watch
       tree
       wget
