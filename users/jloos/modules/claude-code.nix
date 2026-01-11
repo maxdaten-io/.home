@@ -1,5 +1,13 @@
 { pkgs, ... }:
 {
+  home.file.".claude/CLAUDE.md".text = ''
+    # User Instructions
+
+    ## Devenv
+
+    When asked to create a devenv environment for a project, use `devenv init` to initialize the environment.
+  '';
+
   home.packages = with pkgs; [
     (pkgs.buildNpmPackage rec {
       pname = "claude-code";
