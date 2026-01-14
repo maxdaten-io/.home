@@ -49,13 +49,13 @@ echo ""
 echo "==> Updating $NIX_FILE..."
 
 # Update version
-sed -i '' "s/version = \"$CURRENT_VERSION\"/version = \"$VERSION\"/" "$NIX_FILE"
+sed -i "s/version = \"$CURRENT_VERSION\"/version = \"$VERSION\"/" "$NIX_FILE"
 
 # Update source hash (match the specific line pattern)
-sed -i '' "s|hash = \"sha256-[^\"]*\"|hash = \"$SRC_HASH\"|" "$NIX_FILE"
+sed -i "s|hash = \"sha256-[^\"]*\"|hash = \"$SRC_HASH\"|" "$NIX_FILE"
 
 # Update npmDepsHash
-sed -i '' "s|npmDepsHash = \"sha256-[^\"]*\"|npmDepsHash = \"$NPM_DEPS_HASH\"|" "$NIX_FILE"
+sed -i "s|npmDepsHash = \"sha256-[^\"]*\"|npmDepsHash = \"$NPM_DEPS_HASH\"|" "$NIX_FILE"
 
 echo ""
 echo "==> Done! Updated claude-code: $CURRENT_VERSION -> $VERSION"
