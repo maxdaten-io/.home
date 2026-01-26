@@ -19,7 +19,7 @@
     rsync
     mas
 
-    nixfmt-rfc-style
+    nixfmt
     nixd
     devenv
     direnv

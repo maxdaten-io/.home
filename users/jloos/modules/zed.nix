@@ -7,7 +7,7 @@
     # Make LSP binaries and formatters available to Zed
     extraPackages = with pkgs; [
       nixd
-      nixfmt-rfc-style
+      nixfmt
     ];
 
     extensions = [
