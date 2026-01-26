@@ -1,7 +1,6 @@
 { inputs, ... }:
 {
   imports = [
-    inputs.vscode-server.nixosModule
     inputs.sops-nix.nixosModules.sops
     inputs.nnf.nixosModules.default
     ./configuration.nix
@@ -9,7 +8,6 @@
     ./network.nix
     ./printing.nix
     ./nix-config.nix
-    ./vscode-server.nix
     ./system-dashboard
     ../../nixos/modules/my-networks
   ];
