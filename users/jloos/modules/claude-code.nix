@@ -6,6 +6,10 @@
     ## Devenv
 
     When asked to create a devenv environment for a project, use `devenv init` to initialize the environment.
+
+    ## Tools and CLIs
+
+    When a tool is missing in environment, try to use `nix` like `nix shell nixpkgs#nodejs_latest -c npx --help` first.
   '';
 
   home.packages = with pkgs; [
