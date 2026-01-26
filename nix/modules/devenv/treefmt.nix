@@ -11,7 +11,6 @@ let
 
     # Nix formatting
     programs.nixfmt.enable = true;
-    programs.nixfmt.package = pkgs.nixfmt-rfc-style;
     programs.deadnix.enable = true;
 
     # JSON formatting
