@@ -89,10 +89,7 @@ in
     shellInit = ''
       ${if trace then "set -U fish_trace 2" else "set -e fish_trace"}
       set -U fish_greeting
-      set -U PROJECT_PATHS ~/Developer/maxdaten-io/buzzar ~/Developer/maxdaten-io/gitops ~/Developer/.home ~/Developer
       set __done_enabled
-
-
     '';
 
     functions.fish_reload = "source ~/.config/fish/config.fish";
