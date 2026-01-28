@@ -11,6 +11,7 @@
     working-directory = ${config.home.homeDirectory}/Developer
 
     unfocused-split-opacity = 0.8
+    cursor-click-to-move = true
 
     font-size = 15
   '';
