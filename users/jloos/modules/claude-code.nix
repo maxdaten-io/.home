@@ -13,7 +13,6 @@
   '';
 
   home.packages = with pkgs; [
-    claude-monitor
     (pkgs.buildNpmPackage rec {
       pname = "claude-code";
       version = "2.1.20";
