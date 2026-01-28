@@ -67,7 +67,7 @@ in
         tay = "terraform apply --yes";
         lg = "lazygit";
         # Handy for nix shells with deep folder structures
-        cdr = "cd $PRJ_ROOT";
+        cdr = "cd $DEVENV_ROOT";
       }
       (lib.mkIf isDarwin {
         # Install nix-darwin (initially)
