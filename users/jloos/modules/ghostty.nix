@@ -9,6 +9,7 @@
     theme = atelier-cave
 
     working-directory = ${config.home.homeDirectory}/Developer
+    window-inherit-working-directory = false
 
     unfocused-split-opacity = 0.8
     cursor-click-to-move = true
