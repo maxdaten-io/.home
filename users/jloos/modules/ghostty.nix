@@ -12,7 +12,7 @@
 
     unfocused-split-opacity = 0.8
     cursor-click-to-move = true
-    keybind = option+backspace=text:\x1b\x7f
+    keybind = opt+backspace=text:\x17
 
     font-size = 15
   '';
