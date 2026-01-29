@@ -7,11 +7,18 @@ NIX_FILE="$REPO_ROOT/users/jloos/modules/claude-code.nix"
 LOCK_FILE="$REPO_ROOT/users/jloos/modules/claude-code/package-lock.json"
 
 # Get version from argument or fetch latest
-if [[ $# -ge 1 ]]; then
+if [[ $# -ge 1 && $1 == "latest" ]]; then
+  echo "Fetching latest version from GitHub tags..."
+  VERSION=$(git ls-remote --tags --refs https://github.com/anthropics/claude-code |
+    sed 's|.*refs/tags/||' |
+    sed 's/^v//' |
+    sort -V |
+    tail -1)
+elif [[ $# -ge 1 ]]; then
   VERSION="$1"
 else
-  echo "Fetching latest version from npm..."
-  VERSION=$(npm view @anthropic-ai/claude-code version)
+  echo "Usage: update-claude-code.sh <version|latest>"
+  exit 1
 fi
 
 CURRENT_VERSION=$(grep 'version = "' "$NIX_FILE" | head -1 | sed 's/.*version = "\([^"]*\)".*/\1/')
