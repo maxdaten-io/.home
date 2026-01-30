@@ -69,3 +69,22 @@ echo "==> Done! Updated claude-code: $CURRENT_VERSION -> $VERSION"
 echo ""
 echo "Changes:"
 git diff --stat "$NIX_FILE" "$LOCK_FILE" 2>/dev/null || true
+
+echo ""
+echo "==> Changelog highlights ($CURRENT_VERSION -> $VERSION):"
+echo ""
+CHANGELOG=$(curl -fsSL "https://raw.githubusercontent.com/anthropics/claude-code/refs/heads/main/CHANGELOG.md" 2>/dev/null) || {
+  echo "(Could not fetch changelog)"
+  exit 0
+}
+
+# Extract entries from target version down to (excluding) current version
+echo "$CHANGELOG" | awk -v target="$VERSION" -v current="$CURRENT_VERSION" '
+  /^## / {
+    v = $2
+    gsub(/^v/, "", v)
+    if (v == target) { printing = 1 }
+    else if (v == current) { printing = 0 }
+  }
+  printing { print }
+'
