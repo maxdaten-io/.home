@@ -3,6 +3,14 @@
 {
   imports = [ ./nix/modules/devenv/treefmt.nix ];
 
+  # Workaround: pre-commit pulls in dotnet-sdk which depends on swift,
+  # and swift is broken on Darwin in current nixpkgs-unstable.
+  overlays = [
+    (_: prev: {
+      pre-commit = prev.pre-commit.override { dotnet-sdk = prev.emptyDirectory; };
+    })
+  ];
+
   name = ".home shell";
 
   packages = with pkgs; [
