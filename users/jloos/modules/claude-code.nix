@@ -3,6 +3,12 @@
   home.file.".claude/CLAUDE.md".text = ''
     # User Instructions
 
+    > This file is managed by Home Manager. Edit `~/Developer/.home/users/jloos/modules/claude-code.nix` and run `home-manager switch --flake '.#jloos-macos'` to apply changes.
+
+    ## Shell
+
+    User runs **fish shell**. All terminal commands provided to the user must be fish-compatible (no bash-only syntax like `<<<`, `$()` subshells, `export FOO=bar`, etc.). Use fish equivalents: `set`, `string`, pipes with `psub`, etc.
+
     ## Devenv
 
     When asked to create a devenv environment for a project, use `devenv init` to initialize the environment.
