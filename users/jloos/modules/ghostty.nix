@@ -11,6 +11,7 @@
     working-directory = ${config.home.homeDirectory}/Developer
     window-inherit-working-directory = false
 
+    split-divider-color = #955ae7
     unfocused-split-opacity = 0.8
     cursor-click-to-move = true
     keybind = opt+backspace=text:\x17
