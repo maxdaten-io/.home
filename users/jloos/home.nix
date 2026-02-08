@@ -75,6 +75,7 @@ in
     with pkgs;
     [
       direnv
+      nodejs
       python3
 
       gnupg
