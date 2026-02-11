@@ -21,14 +21,14 @@
   home.packages = with pkgs; [
     (pkgs.buildNpmPackage rec {
       pname = "claude-code";
-      version = "2.1.37";
+      version = "2.1.39";
 
       src = pkgs.fetchurl {
         url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz";
-        hash = "sha256-JBarNxtzDn6sdgl5yLPIUgrrUoyDZNjiLqrYVPPpjlo=";
+        hash = "sha256-iJB/LuXYACOu6Y5czpP7eGFdrvZTbVUeK7K8pBmjxvY=";
       };
 
-      npmDepsHash = "sha256-/+YDvuUE4C47FF8bvOHBpEYtMgSSwSshD0lnBYckAUM=";
+      npmDepsHash = "sha256-n+lDz+CpYs4FSIAtkMZt5zqTrKjToIio2C8Eg9UFyI4=";
 
       # Get with `npm install @anthropic-ai/claude-code --package-lock-only`
       postPatch = ''
