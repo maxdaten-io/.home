@@ -4,6 +4,7 @@
     enable = true;
     tmuxinator.enable = true;
     clock24 = true;
+    mouse = true;
     plugins = with pkgs; [
       tmuxPlugins.cpu
       {
