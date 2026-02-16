@@ -66,6 +66,7 @@ in
     ./modules/zed.nix
     ./modules/zoxide.nix
     ./modules/claude-code.nix
+    ./modules/playwright-cli.nix
     ./modules/indie-consultant.nix
   ];
 
@@ -101,7 +102,6 @@ in
       tldr
       gemini-cli
 
-      playwright-test
       mgrep
       spec-kit
       #> ERROR: Could not find a version that satisfies the requirement keyring<24.0,>=23.4 (from yubikey-manager) (from versions: none)

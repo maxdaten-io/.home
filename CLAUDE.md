@@ -24,11 +24,7 @@ just switch
 sudo darwin-rebuild switch --flake . --verbose
 ```
 
-**Home Manager configuration for macOS:**
-
-```bash
-home-manager switch --flake '.#jloos-macos'
-```
+**Home Manager configuration for macOS** is applied via `just switch` (integrated into the darwin rebuild).
 
 **NixOS (Pi) rebuild locally:**
 
