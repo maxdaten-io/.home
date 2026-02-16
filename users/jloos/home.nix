@@ -100,7 +100,8 @@ in
       rename
       tldr
       gemini-cli
-      # claude-code
+
+      playwright-test
       mgrep
       spec-kit
       #> ERROR: Could not find a version that satisfies the requirement keyring<24.0,>=23.4 (from yubikey-manager) (from versions: none)
