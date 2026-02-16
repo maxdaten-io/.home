@@ -8,6 +8,8 @@
     extraConfig = ''
       set -g pane-active-border-style "fg=red,bold"
       set -g pane-border-style "fg=colour238"
+      set -g window-style "bg=colour235"
+      set -g window-active-style "bg=terminal"
     '';
     plugins = with pkgs; [
       tmuxPlugins.cpu
