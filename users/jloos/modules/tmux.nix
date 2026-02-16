@@ -5,6 +5,10 @@
     tmuxinator.enable = true;
     clock24 = true;
     mouse = true;
+    extraConfig = ''
+      set -g pane-active-border-style "fg=green,bold"
+      set -g pane-border-style "fg=colour238"
+    '';
     plugins = with pkgs; [
       tmuxPlugins.cpu
       {
