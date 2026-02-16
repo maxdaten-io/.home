@@ -15,8 +15,7 @@ _prompt-commit:
         echo "Changes detected. Would you like to commit them? (y/n)"
         read -r answer
         if [ "$answer" = "y" ]; then
-            git add -A
-            git commit -m "chore: Update darwin configuration"
+            claude -p "Create a conventional commit for all current changes. Stage all files and commit." --allow-dangerously-skip-permissions --dangerously-skip-permissions
             echo "Changes committed!"
         else
             echo "Skipping commit"
