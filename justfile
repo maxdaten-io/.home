@@ -15,7 +15,10 @@ _prompt-commit:
         echo "Changes detected. Would you like to commit them? (y/n)"
         read -r answer
         if [ "$answer" = "y" ]; then
-            claude -p "Create a conventional commit for all current changes. Stage all files and commit." --allow-dangerously-skip-permissions --dangerously-skip-permissions
+            claude \
+              -p "Create a conventional commit for all current changes. Stage all files and commit." \
+              --allow-dangerously-skip-permissions --dangerously-skip-permissions \
+              --model haiku
             echo "Changes committed!"
         else
             echo "Skipping commit"
