@@ -51,6 +51,9 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Developer environment (devenv 2.0)
+    devenv.url = "github:cachix/devenv";
+
     # Code formatting
     treefmt-nix.url = "github:numtide/treefmt-nix";
 
@@ -61,10 +64,12 @@
     extra-trusted-public-keys = [
       "maxdaten-io.cachix.org-1:ZDDi/8gGLSeUEU9JST6uXDcQfNp2VZzccmjUljPHHS8="
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+      "devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw="
     ];
     extra-substituters = [
       "https://maxdaten-io.cachix.org"
       "https://nix-community.cachix.org"
+      "https://devenv.cachix.org"
     ];
   };
 

@@ -27,10 +27,10 @@
     enable = true;
 
     mcpServers = {
-      # Local devenv MCP server
+      # Local devenv MCP server (uses system-installed devenv 2.0)
       devenv = {
         type = "stdio";
-        command = "${pkgs.devenv}/bin/devenv";
+        command = "devenv";
         args = [ "mcp" ];
         env = {
           DEVENV_ROOT = config.devenv.root;

@@ -4,3 +4,5 @@ inputs:
     url: github:NixOS/nixpkgs/nixpkgs-unstable
   treefmt-nix:
     url: github:numtide/treefmt-nix
+  git-hooks:
+    url: github:cachix/git-hooks.nix

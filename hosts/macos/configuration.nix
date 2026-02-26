@@ -1,6 +1,7 @@
 {
   pkgs,
   config,
+  inputs,
   ...
 }:
 {
@@ -21,7 +22,7 @@
 
     nixfmt
     nixd
-    devenv
+    inputs.devenv.packages.${pkgs.system}.devenv
     direnv
   ];
 
@@ -30,8 +31,8 @@
   environment.etc."nix/nix.custom.conf".text = pkgs.lib.mkForce ''
     # Written by hosts/macos/configuration.nix
     # The contents below are based on options specified at installation time.
-    substituters = https://cache.nixos.org/ https://maxdaten-io.cachix.org
-    trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= maxdaten-io.cachix.org-1:ZDDi/8gGLSeUEU9JST6uXDcQfNp2VZzccmjUljPHHS8=
+    substituters = https://cache.nixos.org/ https://maxdaten-io.cachix.org https://devenv.cachix.org
+    trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= maxdaten-io.cachix.org-1:ZDDi/8gGLSeUEU9JST6uXDcQfNp2VZzccmjUljPHHS8= devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw=
     trusted-users = root @admin
 
     !include ${config.sops.templates.github-access-token.path}
