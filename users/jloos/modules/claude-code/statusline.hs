@@ -1,23 +1,76 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Main where
 
 import Control.Exception (SomeException, catch)
-import Data.Aeson (Value (..), decode)
-import qualified Data.Aeson.Key as K
-import qualified Data.Aeson.KeyMap as KM
+import Control.Monad (guard, void)
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Maybe (MaybeT (..), runMaybeT)
+import Data.Aeson (FromJSON, decode)
 import qualified Data.ByteString.Lazy as BL
 import Data.Maybe (catMaybes, fromMaybe)
-import qualified Data.Text as T
 import Data.Time.Clock (NominalDiffTime, UTCTime, diffUTCTime, getCurrentTime)
 import Data.Time.Format.ISO8601 (iso8601ParseM)
 import Data.Time.LocalTime (ZonedTime, zonedTimeToUTC)
+import GHC.Generics (Generic)
 import Numeric (showFFloat)
 import System.Directory (doesFileExist, getHomeDirectory, getModificationTime)
 import System.Environment (getArgs, lookupEnv)
 import System.Exit (ExitCode (..))
 import System.FilePath (takeFileName)
 import System.Process (proc, readCreateProcessWithExitCode)
+
+--------------------- JSON schema types -----------------------
+
+-- Claude Code statusline JSON (stdin)
+data StatusInput = StatusInput
+  { model          :: Maybe ModelInfo
+  , workspace      :: Maybe WorkspaceInfo
+  , context_window :: Maybe ContextWindow
+  , output_style   :: Maybe StyleInfo
+  } deriving (Generic)
+instance FromJSON StatusInput
+
+newtype ModelInfo = ModelInfo { display_name :: String } deriving (Generic)
+instance FromJSON ModelInfo
+
+newtype WorkspaceInfo = WorkspaceInfo { current_dir :: String } deriving (Generic)
+instance FromJSON WorkspaceInfo
+
+data ContextWindow = ContextWindow
+  { remaining_percentage :: Maybe Double
+  , total_input_tokens   :: Maybe Int
+  , total_output_tokens  :: Maybe Int
+  , context_window_size  :: Maybe Int
+  } deriving (Generic)
+instance FromJSON ContextWindow
+
+newtype StyleInfo = StyleInfo { name :: String } deriving (Generic)
+instance FromJSON StyleInfo
+
+-- Credentials file (~/.claude/.credentials.json)
+newtype CredFile = CredFile { claudeAiOauth :: Maybe OAuthCred } deriving (Generic)
+instance FromJSON CredFile
+
+newtype OAuthCred = OAuthCred { accessToken :: Maybe String } deriving (Generic)
+instance FromJSON OAuthCred
+
+-- Usage cache (CLAUDE_USAGE_CACHE)
+data UsageWindow = UsageWindow
+  { utilization :: Maybe Double
+  , resets_at   :: Maybe String
+  } deriving (Generic)
+instance FromJSON UsageWindow
+
+data UsageCache = UsageCache
+  { five_hour :: Maybe UsageWindow
+  , seven_day :: Maybe UsageWindow
+  } deriving (Generic)
+instance FromJSON UsageCache
+
+emptyInput :: StatusInput
+emptyInput = StatusInput Nothing Nothing Nothing Nothing
 
 -------------------- Atelier Cave palette --------------------
 
@@ -40,7 +93,6 @@ bgC (r, g, b) = "\ESC[48;2;" ++ show r ++ ";" ++ show g ++ ";" ++ show b ++ "m"
 reset :: String
 reset = "\ESC[0m"
 
--- Precomputed ANSI for the white foreground (used in every segment)
 fgWhite :: String
 fgWhite = fgC cFg0
 
@@ -82,31 +134,6 @@ renderLine ((c, _, content) : rest) =
       fgC prev ++ bgC c' ++ [sep]
       ++ fgWhite ++ txt
       ++ go c' more
-
------------------------- JSON helpers ------------------------
-
-lookupNested :: Value -> [T.Text] -> Maybe Value
-lookupNested v [] = Just v
-lookupNested (Object obj) (k : ks) =
-  case KM.lookup (K.fromText k) obj of
-    Just v  -> lookupNested v ks
-    Nothing -> Nothing
-lookupNested _ _ = Nothing
-
-jsonStr :: Value -> [T.Text] -> String
-jsonStr v path = case lookupNested v path of
-  Just (String t) -> T.unpack t
-  _               -> ""
-
-jsonMaybeStr :: Value -> [T.Text] -> Maybe String
-jsonMaybeStr v path = case lookupNested v path of
-  Just (String t) -> Just (T.unpack t)
-  _               -> Nothing
-
-jsonNum :: Value -> [T.Text] -> Maybe Double
-jsonNum v path = case lookupNested v path of
-  Just (Number n) -> Just (realToFrac n)
-  _               -> Nothing
 
 ----------------------- Formatting --------------------------
 
@@ -166,6 +193,14 @@ emptyUsage = UsageInfo Nothing Nothing Nothing Nothing
 parseISO :: String -> Maybe UTCTime
 parseISO s = zonedTimeToUTC <$> (iso8601ParseM s :: Maybe ZonedTime)
 
+toUsageInfo :: UsageCache -> UsageInfo
+toUsageInfo (UsageCache mFive mSeven) = UsageInfo
+  { fiveHourUtil  = utilization =<< mFive
+  , fiveHourReset = parseISO =<< resets_at =<< mFive
+  , sevenDayUtil  = utilization =<< mSeven
+  , sevenDayReset = parseISO =<< resets_at =<< mSeven
+  }
+
 readUsageCache :: FilePath -> IO UsageInfo
 readUsageCache cachePath = catch readIt (\e -> let _ = e :: SomeException in pure emptyUsage)
   where
@@ -173,14 +208,7 @@ readUsageCache cachePath = catch readIt (\e -> let _ = e :: SomeException in pur
       exists <- doesFileExist cachePath
       if not exists then pure emptyUsage else do
         bytes <- BL.readFile cachePath
-        case decode bytes of
-          Nothing -> pure emptyUsage
-          Just json -> pure UsageInfo
-            { fiveHourUtil  = jsonNum json ["five_hour", "utilization"]
-            , fiveHourReset = parseISO =<< jsonMaybeStr json ["five_hour", "resets_at"]
-            , sevenDayUtil  = jsonNum json ["seven_day", "utilization"]
-            , sevenDayReset = parseISO =<< jsonMaybeStr json ["seven_day", "resets_at"]
-            }
+        pure $ maybe emptyUsage toUsageInfo (decode bytes)
 
 ---------------------- Fetch mode ---------------------------
 
@@ -192,45 +220,44 @@ isCacheFresh cachePath now = do
     pure (diffUTCTime now mtime < 30)
 
 runFetch :: IO ()
-runFetch = do
-  cachePath <- getUsageCachePath
-  now <- getCurrentTime
-  fresh <- isCacheFresh cachePath now
-  if fresh then pure () else do
-    home <- getHomeDirectory
-    let credPath = home ++ "/.claude/.credentials.json"
-    credExists <- doesFileExist credPath
-    if not credExists then pure () else do
-      credBytes <- BL.readFile credPath
-      case decode credBytes of
-        Nothing -> pure ()
-        Just credJson -> do
-          let token = jsonStr credJson ["claudeAiOauth", "accessToken"]
-          if null token then pure () else do
-            (exit, out, _) <- readCreateProcessWithExitCode
-              (proc "curl" [ "-sf", "--max-time", "10"
-                           , "-H", "Authorization: Bearer " ++ token
-                           , "-H", "anthropic-beta: oauth-2025-04-20"
-                           , "https://api.anthropic.com/oauth/usage"
-                           ]) ""
-            case exit of
-              ExitSuccess -> writeFile cachePath out
-              _           -> pure ()
+runFetch = void $ runMaybeT $ do
+  cachePath <- lift getUsageCachePath
+  now       <- lift getCurrentTime
+  fresh     <- lift $ isCacheFresh cachePath now
+  guard (not fresh)
+  home <- lift getHomeDirectory
+  let credPath = home ++ "/.claude/.credentials.json"
+  credExists <- lift $ doesFileExist credPath
+  guard credExists
+  credBytes <- lift $ BL.readFile credPath
+  cred  <- MaybeT . pure $ (decode credBytes :: Maybe CredFile)
+  oauth <- MaybeT . pure $ claudeAiOauth cred
+  token <- MaybeT . pure $ accessToken oauth
+  guard (not (null token))
+  (exit, out, _) <- lift $ readCreateProcessWithExitCode
+    (proc "curl" [ "-sf", "--max-time", "10"
+                 , "-H", "Authorization: Bearer " ++ token
+                 , "-H", "anthropic-beta: oauth-2025-04-20"
+                 , "https://api.anthropic.com/oauth/usage"
+                 ]) ""
+  guard (exit == ExitSuccess)
+  lift $ writeFile cachePath out
 
 ----------------------- Statusline --------------------------
 
 runStatusline :: IO ()
 runStatusline = do
   input <- BL.getContents
-  let json = fromMaybe (Object KM.empty) (decode input)
+  let si = fromMaybe emptyInput (decode input)
 
-  let cwd    = jsonStr json ["workspace", "current_dir"]
-      model  = jsonStr json ["model", "display_name"]
-      style  = jsonStr json ["output_style", "name"]
-      ctxPct = jsonNum json ["context_window", "remaining_percentage"]
-      inTok  = maybe 0 round (jsonNum json ["context_window", "total_input_tokens"]) :: Int
-      outTok = maybe 0 round (jsonNum json ["context_window", "total_output_tokens"]) :: Int
-      ctxMax = maybe 0 round (jsonNum json ["context_window", "context_window_size"]) :: Int
+  let cwd    = maybe "" current_dir (workspace si)
+      mdl    = maybe "" display_name (model si)
+      styl   = maybe "" name (output_style si)
+      mCtx   = context_window si
+      ctxPct = remaining_percentage =<< mCtx
+      inTok  = fromMaybe 0 (total_input_tokens =<< mCtx)
+      outTok = fromMaybe 0 (total_output_tokens =<< mCtx)
+      ctxMax = fromMaybe 0 (context_window_size =<< mCtx)
 
   -- Git info
   isGit <- gitIn cwd ["rev-parse", "--git-dir"]
@@ -265,7 +292,7 @@ runStatusline = do
       segGit | null branchName = Nothing
              | otherwise = Just (seg cAqua $ [' ', iconGit, ' '] ++ branchName ++ gitSt ++ " ")
 
-      segModel = Just (seg cBlue $ [' ', iconRocket, ' '] ++ model ++ " ")
+      segModel = Just (seg cBlue $ [' ', iconRocket, ' '] ++ mdl ++ " ")
 
       fmt5h u = [' ', iconBattery] ++ " 5h " ++ formatUtil u (fiveHourReset usage) now
       fmt7d u = [' ', iconCalendar] ++ " 7d " ++ formatUtil u (sevenDayReset usage) now
@@ -290,8 +317,8 @@ runStatusline = do
           | otherwise ->
               Just (cBg1, '\xE0C4', [' ', iconBrain, ' '] ++ show (round p :: Int) ++ "% ")
 
-      segStyle | null style || style == "default" = Nothing
-               | otherwise = Just (cBg1, '\xE0C4', [' ', iconBrush, ' '] ++ style ++ " ")
+      segStyle | null styl || styl == "default" = Nothing
+               | otherwise = Just (cBg1, '\xE0C4', [' ', iconBrush, ' '] ++ styl ++ " ")
 
   putStrLn $ renderLine (catMaybes [segDir, segGit, segModel, segUsage, segCtx, segStyle])
 

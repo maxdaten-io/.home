@@ -1,6 +1,7 @@
 {
   pkgs,
   config,
+  inputs,
   ...
 }:
 {
@@ -22,8 +23,8 @@
     nixfmt
     nixd
     devenv
-    # inputs.devenv.packages.${pkgs.system}.devenv
-    direnv
+    inputs.devenv.packages.${pkgs.system}.devenv
+    # direnv
   ];
 
   nix.enable = false;
