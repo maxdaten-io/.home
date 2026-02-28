@@ -46,8 +46,9 @@ fgWhite = fgC cFg0
 
 ------------------- Nerd font icons -------------------------
 
-iconNix, iconGit, iconRocket, iconBattery, iconCalendar, iconBrain, iconBrush :: Char
+iconNix, iconFolder, iconGit, iconRocket, iconBattery, iconCalendar, iconBrain, iconBrush :: Char
 iconNix      = '\xF313'   -- nf-linux-nixos
+iconFolder   = '\xF07B'   -- nf-fa-folder
 iconGit      = '\xE725'   -- nf-dev-git_branch
 iconRocket   = '\xF135'   -- nf-fa-rocket
 iconBattery  = '\xF0079'  -- nf-md-battery_50
@@ -248,10 +249,13 @@ runStatusline = do
   now <- getCurrentTime
   usage <- readUsageCache cachePath
 
+  -- Nix shell detection (like starship's nix_shell module)
+  dirIcon <- maybe iconFolder (const iconNix) <$> lookupEnv "IN_NIX_SHELL"
+
   -- Build segments
   let dir = takeFileName cwd
 
-      segDir = Just (cOrange, [' ', iconNix, ' '] ++ dir ++ " ")
+      segDir = Just (cOrange, [' ', dirIcon, ' '] ++ dir ++ " ")
 
       segGit | null branchName = Nothing
              | otherwise = Just (cAqua, [' ', iconGit, ' '] ++ branchName ++ gitSt ++ " ")
