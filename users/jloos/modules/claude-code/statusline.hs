@@ -7,35 +7,75 @@ import Data.Aeson (Value (..), decode)
 import qualified Data.Aeson.Key as K
 import qualified Data.Aeson.KeyMap as KM
 import qualified Data.ByteString.Lazy as BL
-import Data.Maybe (fromMaybe)
+import Data.Maybe (catMaybes, fromMaybe)
 import qualified Data.Text as T
 import Data.Time.Clock (NominalDiffTime, UTCTime, diffUTCTime, getCurrentTime)
 import Data.Time.Format.ISO8601 (iso8601ParseM)
 import Data.Time.LocalTime (ZonedTime, zonedTimeToUTC)
 import Numeric (showFFloat)
 import System.Directory (doesFileExist, getHomeDirectory, getModificationTime)
-import System.Environment (getArgs)
+import System.Environment (getArgs, lookupEnv)
 import System.Exit (ExitCode (..))
 import System.FilePath (takeFileName)
 import System.Process (proc, readCreateProcessWithExitCode)
 
 -------------------- Atelier Cave palette --------------------
 
--- Background colors
-bgBrown, bgBlue, bgPurple, bgDark :: String
-bgBrown  = "\ESC[48;2;160;110;59m"
-bgBlue   = "\ESC[48;2;57;139;198m"
-bgPurple = "\ESC[48;2;87;109;219m"
-bgDark   = "\ESC[48;2;25;23;28m"
+type Color = (Int, Int, Int)
 
--- Foreground colors
-fgWhite, fgBlue, fgGray :: String
-fgWhite = "\ESC[38;2;239;236;244m"
-fgBlue  = "\ESC[38;2;57;139;198m"
-fgGray  = "\ESC[38;2;113;105;101m"
+cOrange, cAqua, cBlue, cPurple, cBg1, cFg0 :: Color
+cOrange = (170, 87, 60)
+cAqua   = (57, 139, 198)
+cBlue   = (87, 109, 219)
+cPurple = (149, 90, 231)
+cBg1    = (25, 23, 28)
+cFg0    = (239, 236, 244)
+
+fgC :: Color -> String
+fgC (r, g, b) = "\ESC[38;2;" ++ show r ++ ";" ++ show g ++ ";" ++ show b ++ "m"
+
+bgC :: Color -> String
+bgC (r, g, b) = "\ESC[48;2;" ++ show r ++ ";" ++ show g ++ ";" ++ show b ++ "m"
 
 reset :: String
 reset = "\ESC[0m"
+
+-- Precomputed ANSI for the white foreground (used in every segment)
+fgWhite :: String
+fgWhite = fgC cFg0
+
+------------------- Nerd font icons -------------------------
+
+iconFolder, iconGit, iconRocket, iconBattery, iconCalendar, iconBrain, iconBrush :: Char
+iconFolder   = '\xF07B'   -- nf-fa-folder
+iconGit      = '\xE725'   -- nf-dev-git_branch
+iconRocket   = '\xF135'   -- nf-fa-rocket
+iconBattery  = '\xF0079'  -- nf-md-battery_50
+iconCalendar = '\xF051B'  -- nf-md-calendar_clock
+iconBrain    = '\xF02A0'  -- nf-md-brain
+iconBrush    = '\xF1FC'   -- nf-fa-paint_brush
+
+------------------- Powerline rendering ---------------------
+
+type Segment = (Color, String)
+
+-- | Render a list of segments with powerline arrow separators.
+--
+-- Opening:    fg=color \xE0B0 (arrow from transparent into segment)
+-- Transition: fg=prev bg=next \xE0B0 (arrow between segments)
+-- Closing:    reset fg=color \xE0B0 (arrow from segment into transparent)
+renderLine :: [Segment] -> String
+renderLine [] = ""
+renderLine ((c, content) : rest) =
+  fgC c ++ "\xE0B0"
+  ++ bgC c ++ fgWhite ++ content
+  ++ go c rest
+  where
+    go prev [] = reset ++ fgC prev ++ "\xE0B0" ++ reset
+    go prev ((c', txt) : more) =
+      fgC prev ++ bgC c' ++ "\xE0B0"
+      ++ fgWhite ++ txt
+      ++ go c' more
 
 ------------------------ JSON helpers ------------------------
 
@@ -84,6 +124,13 @@ formatCountdown dt
     days  = secs `div` 86400
     rHrs  = (secs `mod` 86400) `div` 3600
 
+formatUtil :: Double -> Maybe UTCTime -> UTCTime -> String
+formatUtil util mReset now =
+  show (round util :: Int) ++ "%"
+  ++ case mReset of
+       Nothing -> ""
+       Just resetAt -> " (" ++ formatCountdown (diffUTCTime resetAt now) ++ ")"
+
 --------------------------- Git -----------------------------
 
 gitIn :: String -> [String] -> IO (Maybe String)
@@ -97,8 +144,8 @@ gitIn dir args = do
 
 ----------------------- Usage cache -------------------------
 
-usageCachePath :: FilePath
-usageCachePath = "/tmp/.claude_usage_cache"
+getUsageCachePath :: IO FilePath
+getUsageCachePath = fromMaybe "/tmp/.claude_usage_cache" <$> lookupEnv "CLAUDE_USAGE_CACHE"
 
 data UsageInfo = UsageInfo
   { fiveHourUtil  :: Maybe Double
@@ -113,13 +160,13 @@ emptyUsage = UsageInfo Nothing Nothing Nothing Nothing
 parseISO :: String -> Maybe UTCTime
 parseISO s = zonedTimeToUTC <$> (iso8601ParseM s :: Maybe ZonedTime)
 
-readUsageCache :: IO UsageInfo
-readUsageCache = catch readIt (\e -> let _ = e :: SomeException in pure emptyUsage)
+readUsageCache :: FilePath -> IO UsageInfo
+readUsageCache cachePath = catch readIt (\e -> let _ = e :: SomeException in pure emptyUsage)
   where
     readIt = do
-      exists <- doesFileExist usageCachePath
+      exists <- doesFileExist cachePath
       if not exists then pure emptyUsage else do
-        bytes <- BL.readFile usageCachePath
+        bytes <- BL.readFile cachePath
         case decode bytes of
           Nothing -> pure emptyUsage
           Just json -> pure UsageInfo
@@ -129,30 +176,20 @@ readUsageCache = catch readIt (\e -> let _ = e :: SomeException in pure emptyUsa
             , sevenDayReset = parseISO =<< jsonMaybeStr json ["seven_day", "resets_at"]
             }
 
-formatUsageSeg :: String -> Maybe Double -> Maybe UTCTime -> UTCTime -> String
-formatUsageSeg label mUtil mReset now = case mUtil of
-  Nothing -> ""
-  Just util ->
-    let countdown = case mReset of
-          Nothing -> ""
-          Just resetAt ->
-            let diff = diffUTCTime resetAt now
-            in " (" ++ formatCountdown diff ++ ")"
-    in bgDark ++ fgGray ++ "  " ++ label ++ " " ++ show (round util :: Int) ++ "%" ++ countdown ++ " " ++ reset
-
 ---------------------- Fetch mode ---------------------------
 
-isCacheFresh :: UTCTime -> IO Bool
-isCacheFresh now = do
-  exists <- doesFileExist usageCachePath
+isCacheFresh :: FilePath -> UTCTime -> IO Bool
+isCacheFresh cachePath now = do
+  exists <- doesFileExist cachePath
   if not exists then pure False else do
-    mtime <- getModificationTime usageCachePath
+    mtime <- getModificationTime cachePath
     pure (diffUTCTime now mtime < 30)
 
 runFetch :: IO ()
 runFetch = do
+  cachePath <- getUsageCachePath
   now <- getCurrentTime
-  fresh <- isCacheFresh now
+  fresh <- isCacheFresh cachePath now
   if fresh then pure () else do
     home <- getHomeDirectory
     let credPath = home ++ "/.claude/.credentials.json"
@@ -171,7 +208,7 @@ runFetch = do
                            , "https://api.anthropic.com/oauth/usage"
                            ]) ""
             case exit of
-              ExitSuccess -> writeFile usageCachePath out
+              ExitSuccess -> writeFile cachePath out
               _           -> pure ()
 
 ----------------------- Statusline --------------------------
@@ -191,7 +228,7 @@ runStatusline = do
 
   -- Git info
   isGit <- gitIn cwd ["rev-parse", "--git-dir"]
-  (branch, gitSt) <- case isGit of
+  (branchName, gitSt) <- case isGit of
     Nothing -> pure ("", "")
     Just _  -> do
       mb <- gitIn cwd ["branch", "--show-current"]
@@ -204,43 +241,49 @@ runStatusline = do
           let d  = case dirty of Nothing -> "!"; _ -> ""
               u  = case untracked of Just s | not (null s) -> "?"; _ -> ""
               st = case d ++ u of "" -> ""; s -> " " ++ s
-          pure (" " ++ b, st)
+          pure (b, st)
 
   -- Usage info
+  cachePath <- getUsageCachePath
   now <- getCurrentTime
-  usage <- readUsageCache
+  usage <- readUsageCache cachePath
 
   -- Build segments
   let dir = takeFileName cwd
 
-      segDir   = bgBrown ++ fgWhite ++ " " ++ dir ++ " " ++ reset
+      segDir = Just (cOrange, [' ', iconFolder, ' '] ++ dir ++ " ")
 
-      segGit   | null branch = ""
-               | otherwise   = bgBlue ++ fgWhite ++ branch ++ gitSt ++ " " ++ reset
+      segGit | null branchName = Nothing
+             | otherwise = Just (cAqua, [' ', iconGit, ' '] ++ branchName ++ gitSt ++ " ")
 
-      segModel = bgPurple ++ fgBlue ++ " " ++ fgWhite ++ model ++ " " ++ reset
+      segModel = Just (cBlue, [' ', iconRocket, ' '] ++ model ++ " ")
 
-      seg5h    = formatUsageSeg "5h" (fiveHourUtil usage) (fiveHourReset usage) now
-      seg7d    = formatUsageSeg "7d" (sevenDayUtil usage) (sevenDayReset usage) now
+      fmt5h u = [' ', iconBattery] ++ " 5h " ++ formatUtil u (fiveHourReset usage) now
+      fmt7d u = [' ', iconCalendar] ++ " 7d " ++ formatUtil u (sevenDayReset usage) now
+      segUsage = case (fiveHourUtil usage, sevenDayUtil usage) of
+        (Nothing, Nothing) -> Nothing
+        (Just u5, Nothing) -> Just (cPurple, fmt5h u5 ++ " ")
+        (Nothing, Just u7) -> Just (cPurple, fmt7d u7 ++ " ")
+        (Just u5, Just u7) -> Just (cPurple, fmt5h u5 ++ fmt7d u7 ++ " ")
 
       totalTok = inTok + outTok
-      segCtx   = case ctxPct of
-                   Nothing -> ""
-                   Just p
-                     | ctxMax > 0 ->
-                         let usedPct = 100 - round p :: Int
-                         in bgDark ++ fgGray ++ "  ctx " ++ show usedPct ++ "% "
-                            ++ formatTokens totalTok ++ "/" ++ formatTokens ctxMax ++ " " ++ reset
-                     | totalTok > 0 ->
-                         bgDark ++ fgGray ++ "  " ++ show (round p :: Int) ++ "% "
-                         ++ formatTokens totalTok ++ " " ++ reset
-                     | otherwise ->
-                         bgDark ++ fgGray ++ "  " ++ show (round p :: Int) ++ "% " ++ reset
+      segCtx = case ctxPct of
+        Nothing -> Nothing
+        Just p
+          | ctxMax > 0 ->
+              let usedPct = 100 - round p :: Int
+              in Just (cBg1, [' ', iconBrain] ++ " ctx " ++ show usedPct ++ "% "
+                          ++ formatTokens totalTok ++ "/" ++ formatTokens ctxMax ++ " ")
+          | totalTok > 0 ->
+              Just (cBg1, [' ', iconBrain, ' '] ++ show (round p :: Int) ++ "% "
+                       ++ formatTokens totalTok ++ " ")
+          | otherwise ->
+              Just (cBg1, [' ', iconBrain, ' '] ++ show (round p :: Int) ++ "% ")
 
-      segStyle | null style || style == "default" = ""
-               | otherwise = bgDark ++ fgGray ++ "  " ++ style ++ " " ++ reset
+      segStyle | null style || style == "default" = Nothing
+               | otherwise = Just (cBg1, [' ', iconBrush, ' '] ++ style ++ " ")
 
-  putStrLn $ segDir ++ segGit ++ segModel ++ seg5h ++ seg7d ++ segCtx ++ segStyle
+  putStrLn $ renderLine (catMaybes [segDir, segGit, segModel, segUsage, segCtx, segStyle])
 
 --------------------------- Main ----------------------------
 

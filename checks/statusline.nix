@@ -51,40 +51,38 @@ let
     output_style.name = "default";
   };
 
-  # Hardcoded in statusline.hs — must match
-  cachePath = "/tmp/.claude_usage_cache";
-
   testFile = pkgs.writeText "statusline.bats" ''
     setup() {
       bats_load_library bats-support
       bats_load_library bats-assert
       export HOME=$(mktemp -d)
-      rm -f ${cachePath}
+      export CLAUDE_USAGE_CACHE="$HOME/.claude_usage_cache"
+      rm -f "$CLAUDE_USAGE_CACHE"
     }
 
     teardown() {
-      rm -f ${cachePath}
+      rm -f "$CLAUDE_USAGE_CACHE"
     }
 
     @test "fetch: no credentials exits cleanly, no cache created" {
       run ${bin} --fetch
       assert_success
-      [ ! -f ${cachePath} ]
+      [ ! -f "$CLAUDE_USAGE_CACHE" ]
     }
 
     @test "fetch: fresh cache skips fetch (TTL)" {
-      echo '{}' > ${cachePath}
+      echo '{}' > "$CLAUDE_USAGE_CACHE"
       local before
-      before=$(stat -c %Y ${cachePath} 2>/dev/null || stat -f %m ${cachePath})
+      before=$(stat -c %Y "$CLAUDE_USAGE_CACHE" 2>/dev/null || stat -f %m "$CLAUDE_USAGE_CACHE")
       run ${bin} --fetch
       assert_success
       local after
-      after=$(stat -c %Y ${cachePath} 2>/dev/null || stat -f %m ${cachePath})
+      after=$(stat -c %Y "$CLAUDE_USAGE_CACHE" 2>/dev/null || stat -f %m "$CLAUDE_USAGE_CACHE")
       [ "$before" = "$after" ]
     }
 
     @test "render: full with usage cache shows 5h/7d/ctx" {
-      echo '${usageCacheJson}' > ${cachePath}
+      echo '${usageCacheJson}' > "$CLAUDE_USAGE_CACHE"
       run ${render} '${fullJson}'
       assert_success
       assert_output --partial "5h 23%"
