@@ -1,4 +1,11 @@
 { pkgs, ... }:
+let
+  claude-statusline = pkgs.writers.writeHaskellBin "claude-statusline" {
+    libraries = [ pkgs.haskellPackages.aeson ];
+    ghcArgs = [ "-O2" ];
+    threadedRuntime = false;
+  } (builtins.readFile ./claude-code/statusline.hs);
+in
 {
   home.file.".claude/CLAUDE.md".text = ''
     # User Instructions
@@ -17,6 +24,11 @@
 
     When a tool is missing in environment, try to use `nix` like `nix shell nixpkgs#nodejs_latest -c npx --help` first.
   '';
+
+  home.file.".claude/statusline-command" = {
+    source = "${claude-statusline}/bin/claude-statusline";
+    executable = true;
+  };
 
   home.packages = with pkgs; [
     (pkgs.buildNpmPackage rec {
