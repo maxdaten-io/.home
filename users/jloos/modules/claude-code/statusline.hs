@@ -46,8 +46,8 @@ fgWhite = fgC cFg0
 
 ------------------- Nerd font icons -------------------------
 
-iconFolder, iconGit, iconRocket, iconBattery, iconCalendar, iconBrain, iconBrush :: Char
-iconFolder   = '\xF07B'   -- nf-fa-folder
+iconNix, iconGit, iconRocket, iconBattery, iconCalendar, iconBrain, iconBrush :: Char
+iconNix      = '\xF313'   -- nf-linux-nixos
 iconGit      = '\xE725'   -- nf-dev-git_branch
 iconRocket   = '\xF135'   -- nf-fa-rocket
 iconBattery  = '\xF0079'  -- nf-md-battery_50
@@ -59,15 +59,15 @@ iconBrush    = '\xF1FC'   -- nf-fa-paint_brush
 
 type Segment = (Color, String)
 
--- | Render a list of segments with powerline arrow separators.
+-- | Render a list of segments with powerline separators.
 --
--- Opening:    fg=color \xE0B0 (arrow from transparent into segment)
+-- Opening:    fg=color \xE0B6 (left half-circle into segment)
 -- Transition: fg=prev bg=next \xE0B0 (arrow between segments)
 -- Closing:    reset fg=color \xE0B0 (arrow from segment into transparent)
 renderLine :: [Segment] -> String
 renderLine [] = ""
 renderLine ((c, content) : rest) =
-  fgC c ++ "\xE0B0"
+  fgC c ++ "\xE0B6"
   ++ bgC c ++ fgWhite ++ content
   ++ go c rest
   where
@@ -251,7 +251,7 @@ runStatusline = do
   -- Build segments
   let dir = takeFileName cwd
 
-      segDir = Just (cOrange, [' ', iconFolder, ' '] ++ dir ++ " ")
+      segDir = Just (cOrange, [' ', iconNix, ' '] ++ dir ++ " ")
 
       segGit | null branchName = Nothing
              | otherwise = Just (cAqua, [' ', iconGit, ' '] ++ branchName ++ gitSt ++ " ")
