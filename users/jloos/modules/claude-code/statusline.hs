@@ -58,23 +58,28 @@ iconBrush    = '\xF1FC'   -- nf-fa-paint_brush
 
 ------------------- Powerline rendering ---------------------
 
-type Segment = (Color, String)
+-- | (bg color, entry separator, content)
+type Segment = (Color, Char, String)
+
+-- | Standard segment using \xE0B0 arrow as entry separator.
+seg :: Color -> String -> Segment
+seg c content = (c, '\xE0B0', content)
 
 -- | Render a list of segments with powerline separators.
 --
 -- Opening:    fg=color \xE0B6 (left half-circle into segment)
--- Transition: fg=prev bg=next \xE0B0 (arrow between segments)
+-- Transition: fg=prev bg=next [sep] (per-segment separator)
 -- Closing:    reset fg=color \xE0B0 (arrow from segment into transparent)
 renderLine :: [Segment] -> String
 renderLine [] = ""
-renderLine ((c, content) : rest) =
+renderLine ((c, _, content) : rest) =
   fgC c ++ "\xE0B6"
   ++ bgC c ++ fgWhite ++ content
   ++ go c rest
   where
     go prev [] = reset ++ fgC prev ++ "\xE0B0" ++ reset
-    go prev ((c', txt) : more) =
-      fgC prev ++ bgC c' ++ "\xE0B0"
+    go prev ((c', sep, txt) : more) =
+      fgC prev ++ bgC c' ++ [sep]
       ++ fgWhite ++ txt
       ++ go c' more
 
@@ -255,37 +260,38 @@ runStatusline = do
   -- Build segments
   let dir = takeFileName cwd
 
-      segDir = Just (cOrange, [' ', dirIcon, ' '] ++ dir ++ " ")
+      segDir = Just (seg cOrange $ [' ', dirIcon, ' '] ++ dir ++ " ")
 
       segGit | null branchName = Nothing
-             | otherwise = Just (cAqua, [' ', iconGit, ' '] ++ branchName ++ gitSt ++ " ")
+             | otherwise = Just (seg cAqua $ [' ', iconGit, ' '] ++ branchName ++ gitSt ++ " ")
 
-      segModel = Just (cBlue, [' ', iconRocket, ' '] ++ model ++ " ")
+      segModel = Just (seg cBlue $ [' ', iconRocket, ' '] ++ model ++ " ")
 
       fmt5h u = [' ', iconBattery] ++ " 5h " ++ formatUtil u (fiveHourReset usage) now
       fmt7d u = [' ', iconCalendar] ++ " 7d " ++ formatUtil u (sevenDayReset usage) now
       segUsage = case (fiveHourUtil usage, sevenDayUtil usage) of
         (Nothing, Nothing) -> Nothing
-        (Just u5, Nothing) -> Just (cPurple, fmt5h u5 ++ " ")
-        (Nothing, Just u7) -> Just (cPurple, fmt7d u7 ++ " ")
-        (Just u5, Just u7) -> Just (cPurple, fmt5h u5 ++ fmt7d u7 ++ " ")
+        (Just u5, Nothing) -> Just (seg cPurple $ fmt5h u5 ++ " ")
+        (Nothing, Just u7) -> Just (seg cPurple $ fmt7d u7 ++ " ")
+        (Just u5, Just u7) -> Just (seg cPurple $ fmt5h u5 ++ fmt7d u7 ++ " ")
 
+      -- \xE0C4 = powerline right hard divider (flame style) for dark tail
       totalTok = inTok + outTok
       segCtx = case ctxPct of
         Nothing -> Nothing
         Just p
           | ctxMax > 0 ->
               let usedPct = 100 - round p :: Int
-              in Just (cBg1, [' ', iconBrain] ++ " ctx " ++ show usedPct ++ "% "
+              in Just (cBg1, '\xE0C4', [' ', iconBrain] ++ " ctx " ++ show usedPct ++ "% "
                           ++ formatTokens totalTok ++ "/" ++ formatTokens ctxMax ++ " ")
           | totalTok > 0 ->
-              Just (cBg1, [' ', iconBrain, ' '] ++ show (round p :: Int) ++ "% "
+              Just (cBg1, '\xE0C4', [' ', iconBrain, ' '] ++ show (round p :: Int) ++ "% "
                        ++ formatTokens totalTok ++ " ")
           | otherwise ->
-              Just (cBg1, [' ', iconBrain, ' '] ++ show (round p :: Int) ++ "% ")
+              Just (cBg1, '\xE0C4', [' ', iconBrain, ' '] ++ show (round p :: Int) ++ "% ")
 
       segStyle | null style || style == "default" = Nothing
-               | otherwise = Just (cBg1, [' ', iconBrush, ' '] ++ style ++ " ")
+               | otherwise = Just (cBg1, '\xE0C4', [' ', iconBrush, ' '] ++ style ++ " ")
 
   putStrLn $ renderLine (catMaybes [segDir, segGit, segModel, segUsage, segCtx, segStyle])
 
