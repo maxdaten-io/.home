@@ -22,9 +22,9 @@
 
     nixfmt
     nixd
-    devenv
+    # devenv
     inputs.devenv.packages.${pkgs.system}.devenv
-    # direnv
+    direnv
   ];
 
   nix.enable = false;
