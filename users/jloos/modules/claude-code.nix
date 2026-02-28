@@ -2,7 +2,10 @@
 let
   claude-statusline = pkgs.writers.writeHaskellBin "claude-statusline" {
     libraries = [ pkgs.haskellPackages.aeson ];
-    ghcArgs = [ "-O2" ];
+    ghcArgs = [
+      "-O2"
+      "-with-rtsopts=-G1 -A128k -H4m -I0"
+    ];
     threadedRuntime = false;
   } (builtins.readFile ./claude-code/statusline.hs);
 in
