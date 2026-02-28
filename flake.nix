@@ -98,11 +98,16 @@
             system,
             ...
           }:
-          {
-            _module.args.pkgs = import nixpkgs {
+          let
+            pkgs = import nixpkgs {
               inherit system;
               config.allowUnfree = true;
             };
+          in
+          {
+            _module.args.pkgs = pkgs;
+
+            checks.statusline = import ./checks/statusline.nix { inherit pkgs; };
           };
       }
     );
