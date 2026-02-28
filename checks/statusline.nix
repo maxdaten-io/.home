@@ -11,8 +11,10 @@ let
 
   bin = "${statusline}/bin/claude-statusline";
 
-  # Strip ANSI escape codes for assertion matching
-  stripAnsi = ''sed 's/\x1b\[[0-9;]*m//g' '';
+  # Helper: pipe JSON through statusline and strip ANSI escapes
+  render = pkgs.writeShellScript "render-statusline" ''
+    echo "$1" | ${bin} | sed 's/\x1b\[[0-9;]*m//g'
+  '';
 
   # Use far-future reset times so countdown is always positive
   usageCacheJson = builtins.toJSON {
@@ -51,82 +53,81 @@ let
 
   # Hardcoded in statusline.hs — must match
   cachePath = "/tmp/.claude_usage_cache";
+
+  testFile = pkgs.writeText "statusline.bats" ''
+    setup() {
+      bats_load_library bats-support
+      bats_load_library bats-assert
+      export HOME=$(mktemp -d)
+      rm -f ${cachePath}
+    }
+
+    teardown() {
+      rm -f ${cachePath}
+    }
+
+    @test "fetch: no credentials exits cleanly, no cache created" {
+      run ${bin} --fetch
+      assert_success
+      [ ! -f ${cachePath} ]
+    }
+
+    @test "fetch: fresh cache skips fetch (TTL)" {
+      echo '{}' > ${cachePath}
+      local before
+      before=$(stat -c %Y ${cachePath} 2>/dev/null || stat -f %m ${cachePath})
+      run ${bin} --fetch
+      assert_success
+      local after
+      after=$(stat -c %Y ${cachePath} 2>/dev/null || stat -f %m ${cachePath})
+      [ "$before" = "$after" ]
+    }
+
+    @test "render: full with usage cache shows 5h/7d/ctx" {
+      echo '${usageCacheJson}' > ${cachePath}
+      run ${render} '${fullJson}'
+      assert_success
+      assert_output --partial "5h 23%"
+      assert_output --partial "7d 5%"
+      assert_output --partial "ctx 28%"
+      assert_output --partial "10K/200K"
+    }
+
+    @test "render: no cache degrades gracefully" {
+      run ${render} '${fullJson}'
+      assert_success
+      assert_output --partial "ctx 28%"
+      refute_output --partial "5h"
+      refute_output --partial "7d"
+    }
+
+    @test "render: fallback without context_window_size" {
+      run ${render} '${noCtxSizeJson}'
+      assert_success
+      assert_output --partial "72%"
+      assert_output --partial "10K"
+      refute_output --partial "ctx"
+    }
+
+    @test "render: empty JSON does not crash" {
+      run ${render} '{}'
+      assert_success
+    }
+  '';
 in
 pkgs.runCommand "statusline-test"
   {
     nativeBuildInputs = [
+      pkgs.bats
+      pkgs.bats.libraries.bats-support
+      pkgs.bats.libraries.bats-assert
       statusline
       pkgs.git
     ];
   }
   ''
-    set -euo pipefail
-
     export HOME=$(mktemp -d)
-
-    pass() { echo "PASS: $1"; }
-    fail() { echo "FAIL: $1"; exit 1; }
-
-    assert_contains() {
-      echo "$1" | grep -qF "$2" && pass "$3" || fail "$3: expected '$2' in output"
-    }
-
-    assert_not_contains() {
-      if echo "$1" | grep -qF "$2"; then
-        fail "$3: unexpected '$2' in output"
-      else
-        pass "$3"
-      fi
-    }
-
-    # Clean slate
-    rm -f ${cachePath}
-
-    # ── Test 1: --fetch without credentials exits cleanly ──
-    ${bin} --fetch
-    if [ ! -f ${cachePath} ]; then
-      pass "fetch-no-creds: exits 0, no cache created"
-    else
-      fail "fetch-no-creds: cache should not exist"
-    fi
-
-    # ── Test 2: --fetch with fresh cache skips fetch ──
-    echo '{}' > ${cachePath}
-    before=$(stat -c %Y ${cachePath} 2>/dev/null || stat -f %m ${cachePath})
-    ${bin} --fetch
-    after=$(stat -c %Y ${cachePath} 2>/dev/null || stat -f %m ${cachePath})
-    if [ "$before" = "$after" ]; then
-      pass "fetch-fresh-cache: cache untouched"
-    else
-      fail "fetch-fresh-cache: cache mtime changed"
-    fi
-    rm -f ${cachePath}
-
-    # ── Test 3: Full rendering with usage cache ──
-    echo '${usageCacheJson}' > ${cachePath}
-    result=$(echo '${fullJson}' | ${bin} | ${stripAnsi})
-    assert_contains "$result" "5h 23%" "render-full: 5h segment"
-    assert_contains "$result" "7d 5%" "render-full: 7d segment"
-    assert_contains "$result" "ctx 28%" "render-full: ctx used%"
-    assert_contains "$result" "10K/200K" "render-full: token ratio"
-    rm -f ${cachePath}
-
-    # ── Test 4: Graceful degradation without cache ──
-    result=$(echo '${fullJson}' | ${bin} | ${stripAnsi})
-    assert_contains "$result" "ctx 28%" "render-no-cache: ctx present"
-    assert_not_contains "$result" "5h" "render-no-cache: no 5h segment"
-    assert_not_contains "$result" "7d" "render-no-cache: no 7d segment"
-
-    # ── Test 5: Fallback ctx without context_window_size ──
-    result=$(echo '${noCtxSizeJson}' | ${bin} | ${stripAnsi})
-    assert_contains "$result" "72%" "render-fallback: remaining pct"
-    assert_contains "$result" "10K" "render-fallback: token count"
-    assert_not_contains "$result" "ctx" "render-fallback: no ctx label"
-
-    # ── Test 6: Minimal JSON (empty) ──
-    result=$(echo '{}' | ${bin} | ${stripAnsi})
-    pass "render-empty: exits 0, no crash"
-
-    echo "All statusline tests passed."
+    export BATS_LIB_PATH="${pkgs.bats.libraries.bats-support}/share/bats:${pkgs.bats.libraries.bats-assert}/share/bats"
+    bats --print-output-on-failure ${testFile}
     touch $out
   ''
