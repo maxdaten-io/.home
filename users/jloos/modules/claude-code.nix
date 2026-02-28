@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, config, ... }:
 let
   claude-statusline = pkgs.writers.writeHaskellBin "claude-statusline" {
     libraries = [ pkgs.haskellPackages.aeson ];
@@ -26,6 +26,17 @@ in
     ## Tools and CLIs
 
     When a tool is missing in environment, try to use `nix` like `nix shell nixpkgs#nodejs_latest -c npx --help` first.
+  '';
+
+  home.activation.extractClaudeCredentials = config.lib.dag.entryAfter [ "writeBoundary" ] ''
+    CRED_FILE="$HOME/.claude/.credentials.json"
+    if /usr/bin/security find-generic-password -s "Claude Code-credentials" -w > "$CRED_FILE" 2>/dev/null; then
+      ${pkgs.coreutils}/bin/chmod 600 "$CRED_FILE"
+      verboseEcho "Extracted Claude Code credentials from Keychain"
+    else
+      verboseEcho "No Claude Code keychain entry found, skipping"
+      ${pkgs.coreutils}/bin/rm -f "$CRED_FILE"
+    fi
   '';
 
   home.file.".claude/statusline-command" = {
