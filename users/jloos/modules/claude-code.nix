@@ -42,6 +42,7 @@
       postInstall = ''
         wrapProgram $out/bin/claude \
           --set DISABLE_AUTOUPDATER 1 \
+          --set ENABLE_CLAUDEAI_MCP_SERVERS false \
           --unset DEV
       '';
 
