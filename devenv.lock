@@ -3,10 +3,10 @@
     "devenv": {
       "locked": {
         "dir": "src/modules",
-        "lastModified": 1771852244,
+        "lastModified": 1772320113,
         "owner": "cachix",
         "repo": "devenv",
-        "rev": "c88c14a32d06173867e26b7d4f5daed38a3f6f1e",
+        "rev": "65c59037d2dba83876ec9da8d22584d604553f16",
         "type": "github"
       },
       "original": {
@@ -38,10 +38,10 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1771858127,
+        "lastModified": 1772024342,
         "owner": "cachix",
         "repo": "git-hooks.nix",
-        "rev": "49bbbfc218bf3856dfa631cead3b052d78248b83",
+        "rev": "6e34e97ed9788b17796ee43ccdbaf871a5c2b476",
         "type": "github"
       },
       "original": {
@@ -72,10 +72,10 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1771207753,
+        "lastModified": 1772173633,
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "d1c15b7d5806069da59e819999d70e1cec0760bf",
+        "rev": "c0f3d81a7ddbc2b1332be0d8481a672b4f6004d6",
         "type": "github"
       },
       "original": {
@@ -87,10 +87,10 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1771207753,
+        "lastModified": 1772173633,
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "d1c15b7d5806069da59e819999d70e1cec0760bf",
+        "rev": "c0f3d81a7ddbc2b1332be0d8481a672b4f6004d6",
         "type": "github"
       },
       "original": {
@@ -102,10 +102,10 @@
     },
     "nixpkgs_3": {
       "locked": {
-        "lastModified": 1771207753,
+        "lastModified": 1772173633,
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "d1c15b7d5806069da59e819999d70e1cec0760bf",
+        "rev": "c0f3d81a7ddbc2b1332be0d8481a672b4f6004d6",
         "type": "github"
       },
       "original": {
@@ -120,6 +120,9 @@
         "devenv": "devenv",
         "git-hooks": "git-hooks",
         "nixpkgs": "nixpkgs_2",
+        "pre-commit-hooks": [
+          "git-hooks"
+        ],
         "treefmt-nix": "treefmt-nix"
       }
     },
