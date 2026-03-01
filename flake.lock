@@ -706,11 +706,11 @@
     "sidequery-homebrew-tap": {
       "flake": false,
       "locked": {
-        "lastModified": 1772383148,
-        "narHash": "sha256-xnjPKs7YO4lQ9xQFptA6u3ZkTUbmS8IOZdC9oB6tk9I=",
+        "lastModified": 1772393710,
+        "narHash": "sha256-EgDlxr0gVZ1GOlw0VOtSiOpx6wbfGPdFOhE4UEhaJfM=",
         "owner": "sidequery",
         "repo": "homebrew-tap",
-        "rev": "eddb414b770f1ae0a4ba4a73950c6d881d314c27",
+        "rev": "76ba411143c478ceb2f5a23cf48469df630e7512",
         "type": "github"
       },
       "original": {
