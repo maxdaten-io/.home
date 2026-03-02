@@ -2,7 +2,7 @@
 let
   palette = import ./palette.nix;
   # Powerline symbols as actual Unicode characters (via JSON decode)
-  pl = builtins.fromJSON ''{"arrow":"\uE0B0","lcap":"\uE0B6","rcap":"\uE0B4","flame":"\uE0C4"}'';
+  pl = builtins.fromJSON ''{"arrow":"\uE0B0","lcap":"\uE0B6","rcap":"\uE0B4","rarrow":"\uE0B2"}'';
 in
 {
   programs.starship =
@@ -248,18 +248,21 @@ in
         # env_var modules are no-ops in the normal shell prompt
         # because the CLAUDE_* vars are never set there.
 
+        fill.symbol = " ";
+
         profiles.claude = lib.replaceStrings [ "\n" ] [ "" ] ''
           [${pl.lcap}](color_orange)
           ''${env_var.CLAUDE_DIR}
           ([${pl.arrow}](fg:color_orange bg:color_aqua)$git_branch$git_status[${pl.arrow}](fg:color_aqua bg:color_blue))
           ''${env_var.CLAUDE_NO_GIT}
           ''${env_var.CLAUDE_MODEL}
-          ([${pl.arrow}](fg:color_blue bg:color_purple)''${env_var.CLAUDE_USAGE}[${pl.flame}](fg:color_purple bg:color_bg1))
-          ''${env_var.CLAUDE_NO_USAGE}
-          (''${env_var.CLAUDE_CTX})
-          ([${pl.flame}](bg:color_bg1)''${env_var.CLAUDE_STYLE})
-          ''${env_var.CLAUDE_CLOSE_DARK}
-          ''${env_var.CLAUDE_CLOSE_BLUE}
+          [${pl.rcap}](fg:color_blue)
+          $fill
+          ([${pl.lcap}](fg:color_purple)''${env_var.CLAUDE_USAGE})
+          (''${env_var.CLAUDE_R_U2D})
+          (''${env_var.CLAUDE_R_UEND})
+          (''${env_var.CLAUDE_R_DOPEN})
+          (''${env_var.CLAUDE_CTX}''${env_var.CLAUDE_STYLE}[${pl.rcap}](fg:color_bg3))
         '';
 
         # env_var sub-modules (nested so TOML generates [env_var.X] sections)
@@ -268,13 +271,14 @@ in
           CLAUDE_DIR.format = "[ $env_value ](fg:color_fg0 bg:color_orange)";
           CLAUDE_MODEL.format = "[ $env_value ](fg:color_fg0 bg:color_blue)";
           CLAUDE_USAGE.format = "[ $env_value ](fg:color_fg0 bg:color_purple)";
-          CLAUDE_CTX.format = "[ $env_value ](fg:color_fg0 bg:color_bg1)";
-          CLAUDE_STYLE.format = "[ $env_value ](fg:color_fg0 bg:color_bg1)";
-          # Sentinel modules — transitions when optional segments are absent
+          CLAUDE_CTX.format = "[ $env_value ](fg:color_fg0 bg:color_bg3)";
+          CLAUDE_STYLE.format = "[ $env_value ](fg:color_fg0 bg:color_bg3)";
+          # Left sentinel
           CLAUDE_NO_GIT.format = "[${pl.arrow}](fg:color_orange bg:color_blue)";
-          CLAUDE_NO_USAGE.format = "[${pl.flame}](fg:color_blue bg:color_bg1)";
-          CLAUDE_CLOSE_DARK.format = "[${pl.arrow}](fg:color_bg1)";
-          CLAUDE_CLOSE_BLUE.format = "[${pl.arrow}](fg:color_blue)";
+          # Right side sentinels
+          CLAUDE_R_U2D.format = "[${pl.rarrow}](fg:color_bg3 bg:color_purple)";
+          CLAUDE_R_UEND.format = "[${pl.rcap}](fg:color_purple)";
+          CLAUDE_R_DOPEN.format = "[${pl.lcap}](fg:color_bg3)";
         };
       }
       // languages;

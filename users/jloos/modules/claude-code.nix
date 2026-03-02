@@ -1,7 +1,10 @@
 { pkgs, config, ... }:
 let
   claude-statusline-unwrapped = pkgs.writers.writeHaskellBin "claude-statusline" {
-    libraries = [ pkgs.haskellPackages.aeson ];
+    libraries = [
+      pkgs.haskellPackages.aeson
+      pkgs.haskellPackages.terminal-size
+    ];
     ghcArgs = [
       "-O2"
       "-with-rtsopts=-G1 -A128k -H4m -I0"
