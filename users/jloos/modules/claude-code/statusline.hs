@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 
 module Main where
 
@@ -9,17 +10,17 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Maybe (MaybeT (..), runMaybeT)
 import Data.Aeson (FromJSON, decode)
 import qualified Data.ByteString.Lazy as BL
-import Data.Maybe (catMaybes, fromMaybe)
+import Data.Maybe (catMaybes, fromMaybe, isJust)
 import Data.Time.Clock (NominalDiffTime, UTCTime, diffUTCTime, getCurrentTime)
 import Data.Time.Format.ISO8601 (iso8601ParseM)
 import Data.Time.LocalTime (ZonedTime, zonedTimeToUTC)
 import GHC.Generics (Generic)
 import Numeric (showFFloat)
 import System.Directory (doesFileExist, getHomeDirectory, getModificationTime)
-import System.Environment (getArgs, lookupEnv)
+import System.Environment (getArgs, getEnvironment, lookupEnv)
 import System.Exit (ExitCode (..))
 import System.FilePath (takeFileName)
-import System.Process (proc, readCreateProcessWithExitCode)
+import System.Process (CreateProcess (env), proc, readCreateProcessWithExitCode)
 
 --------------------- JSON schema types -----------------------
 
@@ -72,69 +73,6 @@ instance FromJSON UsageCache
 emptyInput :: StatusInput
 emptyInput = StatusInput Nothing Nothing Nothing Nothing
 
--------------------- Atelier Cave palette --------------------
-
-type Color = (Int, Int, Int)
-
-cOrange, cAqua, cBlue, cPurple, cBg1, cFg0 :: Color
-cOrange = (170, 87, 60)
-cAqua   = (57, 139, 198)
-cBlue   = (87, 109, 219)
-cPurple = (149, 90, 231)
-cBg1    = (25, 23, 28)
-cFg0    = (239, 236, 244)
-
-fgC :: Color -> String
-fgC (r, g, b) = "\ESC[38;2;" ++ show r ++ ";" ++ show g ++ ";" ++ show b ++ "m"
-
-bgC :: Color -> String
-bgC (r, g, b) = "\ESC[48;2;" ++ show r ++ ";" ++ show g ++ ";" ++ show b ++ "m"
-
-reset :: String
-reset = "\ESC[0m"
-
-fgWhite :: String
-fgWhite = fgC cFg0
-
-------------------- Nerd font icons -------------------------
-
-iconNix, iconFolder, iconGit, iconRocket, iconBattery, iconCalendar, iconBrain, iconBrush :: Char
-iconNix      = '\xF313'   -- nf-linux-nixos
-iconFolder   = '\xF07B'   -- nf-fa-folder
-iconGit      = '\xE725'   -- nf-dev-git_branch
-iconRocket   = '\xF135'   -- nf-fa-rocket
-iconBattery  = '\xF0079'  -- nf-md-battery_50
-iconCalendar = '\xF051B'  -- nf-md-calendar_clock
-iconBrain    = '\xF02A0'  -- nf-md-brain
-iconBrush    = '\xF1FC'   -- nf-fa-paint_brush
-
-------------------- Powerline rendering ---------------------
-
--- | (bg color, entry separator, content)
-type Segment = (Color, Char, String)
-
--- | Standard segment using \xE0B0 arrow as entry separator.
-seg :: Color -> String -> Segment
-seg c content = (c, '\xE0B0', content)
-
--- | Render a list of segments with powerline separators.
---
--- Opening:    fg=color \xE0B6 (left half-circle into segment)
--- Transition: fg=prev bg=next [sep] (per-segment separator)
--- Closing:    reset fg=color \xE0B0 (arrow from segment into transparent)
-renderLine :: [Segment] -> String
-renderLine [] = ""
-renderLine ((c, _, content) : rest) =
-  fgC c ++ "\xE0B6"
-  ++ bgC c ++ fgWhite ++ content
-  ++ go c rest
-  where
-    go prev [] = reset ++ fgC prev ++ "\xE0B0" ++ reset
-    go prev ((c', sep, txt) : more) =
-      fgC prev ++ bgC c' ++ [sep]
-      ++ fgWhite ++ txt
-      ++ go c' more
-
 ----------------------- Formatting --------------------------
 
 formatTokens :: Int -> String
@@ -163,17 +101,6 @@ formatUtil util mReset now =
   ++ case mReset of
        Nothing -> ""
        Just resetAt -> " (" ++ formatCountdown (diffUTCTime resetAt now) ++ ")"
-
---------------------------- Git -----------------------------
-
-gitIn :: String -> [String] -> IO (Maybe String)
-gitIn dir args = do
-  (exit, out, _) <- readCreateProcessWithExitCode (proc "git" ("-C" : dir : args)) ""
-  pure $ case exit of
-    ExitSuccess -> Just (stripTrailingNewlines out)
-    _           -> Nothing
-  where
-    stripTrailingNewlines = reverse . dropWhile (== '\n') . reverse
 
 ----------------------- Usage cache -------------------------
 
@@ -243,7 +170,25 @@ runFetch = void $ runMaybeT $ do
   guard (exit == ExitSuccess)
   lift $ writeFile cachePath out
 
+------------------- Nerd font icons -------------------------
+
+iconNix, iconFolder, iconRocket, iconBattery, iconCalendar, iconBrain, iconBrush :: Char
+iconNix      = '\xF313'   -- nf-linux-nixos
+iconFolder   = '\xF07B'   -- nf-fa-folder
+iconRocket   = '\xF135'   -- nf-fa-rocket
+iconBattery  = '\xF0079'  -- nf-md-battery_50
+iconCalendar = '\xF051B'  -- nf-md-calendar_clock
+iconBrain    = '\xF02A0'  -- nf-md-brain
+iconBrush    = '\xF1FC'   -- nf-fa-paint_brush
+
 ----------------------- Statusline --------------------------
+
+-- | Check whether cwd is inside a git repository.
+isGitRepo :: String -> IO Bool
+isGitRepo cwd = do
+  (exit, _, _) <- readCreateProcessWithExitCode
+    (proc "git" ["-C", cwd, "rev-parse", "--git-dir"]) ""
+  pure (exit == ExitSuccess)
 
 runStatusline :: IO ()
 runStatusline = do
@@ -259,68 +204,71 @@ runStatusline = do
       outTok = fromMaybe 0 (total_output_tokens =<< mCtx)
       ctxMax = fromMaybe 0 (context_window_size =<< mCtx)
 
-  -- Git info
-  isGit <- gitIn cwd ["rev-parse", "--git-dir"]
-  (branchName, gitSt) <- case isGit of
-    Nothing -> pure ("", "")
-    Just _  -> do
-      mb <- gitIn cwd ["branch", "--show-current"]
-      case mb of
-        Nothing -> pure ("", "")
-        Just "" -> pure ("", "")
-        Just b  -> do
-          dirty     <- gitIn cwd ["diff", "--quiet"]
-          untracked <- gitIn cwd ["ls-files", "--others", "--exclude-standard"]
-          let d  = case dirty of Nothing -> "!"; _ -> ""
-              u  = case untracked of Just s | not (null s) -> "?"; _ -> ""
-              st = case d ++ u of "" -> ""; s -> " " ++ s
-          pure (b, st)
+  -- Git: just a boolean check — Starship handles branch/status rendering
+  hasGit <- if null cwd then pure False else isGitRepo cwd
 
   -- Usage info
   cachePath <- getUsageCachePath
   now <- getCurrentTime
   usage <- readUsageCache cachePath
 
-  -- Nix shell detection (like starship's nix_shell module)
+  -- Nix shell detection
   dirIcon <- maybe iconFolder (const iconNix) <$> lookupEnv "IN_NIX_SHELL"
 
-  -- Build segments
+  -- Build content strings
   let dir = takeFileName cwd
 
-      segDir = Just (seg cOrange $ [' ', dirIcon, ' '] ++ dir ++ " ")
-
-      segGit | null branchName = Nothing
-             | otherwise = Just (seg cAqua $ [' ', iconGit, ' '] ++ branchName ++ gitSt ++ " ")
-
-      segModel = Just (seg cBlue $ [' ', iconRocket, ' '] ++ mdl ++ " ")
-
-      fmt5h u = [' ', iconBattery] ++ " 5h " ++ formatUtil u (fiveHourReset usage) now
-      fmt7d u = [' ', iconCalendar] ++ " 7d " ++ formatUtil u (sevenDayReset usage) now
-      segUsage = case (fiveHourUtil usage, sevenDayUtil usage) of
+      fmt5h u = [iconBattery] ++ " 5h " ++ formatUtil u (fiveHourReset usage) now
+      fmt7d u = [iconCalendar] ++ " 7d " ++ formatUtil u (sevenDayReset usage) now
+      usageStr = case (fiveHourUtil usage, sevenDayUtil usage) of
         (Nothing, Nothing) -> Nothing
-        (Just u5, Nothing) -> Just (seg cPurple $ fmt5h u5 ++ " ")
-        (Nothing, Just u7) -> Just (seg cPurple $ fmt7d u7 ++ " ")
-        (Just u5, Just u7) -> Just (seg cPurple $ fmt5h u5 ++ fmt7d u7 ++ " ")
+        (Just u5, Nothing) -> Just $ fmt5h u5
+        (Nothing, Just u7) -> Just $ fmt7d u7
+        (Just u5, Just u7) -> Just $ fmt5h u5 ++ " " ++ fmt7d u7
 
-      -- \xE0C4 = powerline right hard divider (flame style) for dark tail
       totalTok = inTok + outTok
-      segCtx = case ctxPct of
+      ctxStr = case ctxPct of
         Nothing -> Nothing
         Just p
           | ctxMax > 0 ->
               let usedPct = 100 - round p :: Int
-              in Just (cBg1, '\xE0C4', [' ', iconBrain] ++ " ctx " ++ show usedPct ++ "% "
-                          ++ formatTokens totalTok ++ "/" ++ formatTokens ctxMax ++ " ")
+              in Just $ [iconBrain] ++ " ctx " ++ show usedPct ++ "% "
+                          ++ formatTokens totalTok ++ "/" ++ formatTokens ctxMax
           | totalTok > 0 ->
-              Just (cBg1, '\xE0C4', [' ', iconBrain, ' '] ++ show (round p :: Int) ++ "% "
-                       ++ formatTokens totalTok ++ " ")
+              Just $ [iconBrain, ' '] ++ show (round p :: Int) ++ "% "
+                       ++ formatTokens totalTok
           | otherwise ->
-              Just (cBg1, '\xE0C4', [' ', iconBrain, ' '] ++ show (round p :: Int) ++ "% ")
+              Just $ [iconBrain, ' '] ++ show (round p :: Int) ++ "%"
 
-      segStyle | null styl || styl == "default" = Nothing
-               | otherwise = Just (cBg1, '\xE0C4', [' ', iconBrush, ' '] ++ styl ++ " ")
+      styleStr | null styl || styl == "default" = Nothing
+               | otherwise = Just $ [iconBrush, ' '] ++ styl
 
-  putStrLn $ renderLine (catMaybes [segDir, segGit, segModel, segUsage, segCtx, segStyle])
+      hasUsage = isJust usageStr
+      hasTail  = hasUsage || isJust ctxStr || isJust styleStr
+
+  -- Build env var list for Starship
+  let envs = catMaybes
+        [ Just ("CLAUDE_DIR", [dirIcon, ' '] ++ dir)
+        , Just ("CLAUDE_MODEL", [iconRocket, ' '] ++ mdl)
+        , fmap ("CLAUDE_USAGE",) usageStr
+        , fmap ("CLAUDE_CTX",) ctxStr
+        , fmap ("CLAUDE_STYLE",) styleStr
+        , if hasGit then Nothing else Just ("CLAUDE_NO_GIT", "1")
+        , if hasUsage then Nothing
+          else if hasTail then Just ("CLAUDE_NO_USAGE", "1") else Nothing
+        , if hasTail then Just ("CLAUDE_CLOSE_DARK", "1")
+                     else Just ("CLAUDE_CLOSE_BLUE", "1")
+        ]
+
+  -- Call starship
+  starshipBin <- fromMaybe "starship" <$> lookupEnv "STARSHIP_BIN"
+  parentEnv <- getEnvironment
+  let fullEnv = parentEnv ++ envs
+      starshipArgs = ["prompt", "--profile", "claude"] ++
+                     if null cwd then [] else ["--path", cwd]
+  (_, out, _) <- readCreateProcessWithExitCode
+    (proc starshipBin starshipArgs) { env = Just fullEnv } ""
+  putStr out
 
 --------------------------- Main ----------------------------
 

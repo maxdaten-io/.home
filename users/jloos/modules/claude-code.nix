@@ -1,6 +1,6 @@
 { pkgs, config, ... }:
 let
-  claude-statusline = pkgs.writers.writeHaskellBin "claude-statusline" {
+  claude-statusline-unwrapped = pkgs.writers.writeHaskellBin "claude-statusline" {
     libraries = [ pkgs.haskellPackages.aeson ];
     ghcArgs = [
       "-O2"
@@ -8,6 +8,17 @@ let
     ];
     threadedRuntime = false;
   } (builtins.readFile ./claude-code/statusline.hs);
+
+  claude-statusline = pkgs.symlinkJoin {
+    name = "claude-statusline-wrapped";
+    paths = [ claude-statusline-unwrapped ];
+    nativeBuildInputs = [ pkgs.makeWrapper ];
+    postBuild = ''
+      wrapProgram $out/bin/claude-statusline \
+        --set STARSHIP_BIN "${pkgs.starship}/bin/starship" \
+        --prefix PATH : "${pkgs.git}/bin"
+    '';
+  };
 in
 {
   home.file.".claude/CLAUDE.md".text = ''

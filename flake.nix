@@ -111,7 +111,10 @@
           {
             _module.args.pkgs = pkgs;
 
-            checks.statusline = import ./checks/statusline.nix { inherit pkgs; };
+            checks.statusline = import ./checks/statusline.nix {
+              inherit pkgs;
+              lib = pkgs.lib;
+            };
           };
       }
     );

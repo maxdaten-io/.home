@@ -1,5 +1,8 @@
-{ pkgs }:
+{ pkgs, lib }:
 let
+  palette = import ../users/jloos/modules/palette.nix;
+  pl = builtins.fromJSON ''{"arrow":"\uE0B0","lcap":"\uE0B6","flame":"\uE0C4"}'';
+
   statusline = pkgs.writers.writeHaskellBin "claude-statusline" {
     libraries = [ pkgs.haskellPackages.aeson ];
     ghcArgs = [
@@ -11,9 +14,58 @@ let
 
   bin = "${statusline}/bin/claude-statusline";
 
+  # Test-only starship config with the claude profile + env_var modules.
+  # Mirrors the definitions in starship.nix so tests run in the sandbox
+  # without access to ~/.config/starship.toml.
+  testStarshipConfig = (pkgs.formats.toml { }).generate "starship-test.toml" {
+    palette = "atelier-cave";
+    palettes.atelier-cave = palette;
+
+    profiles.claude = lib.replaceStrings [ "\n" ] [ "" ] ''
+      [${pl.lcap}](color_orange)
+      ''${env_var.CLAUDE_DIR}
+      ([${pl.arrow}](fg:color_orange bg:color_aqua)$git_branch$git_status[${pl.arrow}](fg:color_aqua bg:color_blue))
+      ''${env_var.CLAUDE_NO_GIT}
+      ''${env_var.CLAUDE_MODEL}
+      ([${pl.arrow}](fg:color_blue bg:color_purple)''${env_var.CLAUDE_USAGE}[${pl.flame}](fg:color_purple bg:color_bg1))
+      ''${env_var.CLAUDE_NO_USAGE}
+      (''${env_var.CLAUDE_CTX})
+      ([${pl.flame}](bg:color_bg1)''${env_var.CLAUDE_STYLE})
+      ''${env_var.CLAUDE_CLOSE_DARK}
+      ''${env_var.CLAUDE_CLOSE_BLUE}
+    '';
+
+    # env_var sub-modules (nested so TOML generates [env_var.X] sections)
+    env_var = {
+      CLAUDE_DIR.format = "[ $env_value ](fg:color_fg0 bg:color_orange)";
+      CLAUDE_MODEL.format = "[ $env_value ](fg:color_fg0 bg:color_blue)";
+      CLAUDE_USAGE.format = "[ $env_value ](fg:color_fg0 bg:color_purple)";
+      CLAUDE_CTX.format = "[ $env_value ](fg:color_fg0 bg:color_bg1)";
+      CLAUDE_STYLE.format = "[ $env_value ](fg:color_fg0 bg:color_bg1)";
+      CLAUDE_NO_GIT.format = "[${pl.arrow}](fg:color_orange bg:color_blue)";
+      CLAUDE_NO_USAGE.format = "[${pl.flame}](fg:color_blue bg:color_bg1)";
+      CLAUDE_CLOSE_DARK.format = "[${pl.arrow}](fg:color_bg1)";
+      CLAUDE_CLOSE_BLUE.format = "[${pl.arrow}](fg:color_blue)";
+    };
+
+    # Need git modules defined (even if not used in most tests)
+    git_branch = {
+      style = "bg:color_aqua";
+      format = "[[ $symbol$branch ](fg:color_fg0 bg:color_aqua)]($style)";
+    };
+    git_status = {
+      style = "bg:color_aqua";
+      format = "[[($all_status$ahead_behind )](fg:color_fg0 bg:color_aqua)]($style)";
+    };
+  };
+
+  starshipBin = "${pkgs.starship}/bin/starship";
+
   # Helper: pipe JSON through statusline and strip ANSI escapes
   render = pkgs.writeShellScript "render-statusline" ''
-    echo "$1" | ${bin} | sed 's/\x1b\[[0-9;]*m//g'
+    echo "$1" | STARSHIP_BIN="${starshipBin}" \
+      STARSHIP_CONFIG="${testStarshipConfig}" \
+      ${bin} | sed 's/\x1b\[[0-9;]*m//g'
   '';
 
   # Use far-future reset times so countdown is always positive
@@ -57,6 +109,8 @@ let
       bats_load_library bats-assert
       export HOME=$(mktemp -d)
       export CLAUDE_USAGE_CACHE="$HOME/.claude_usage_cache"
+      export STARSHIP_CONFIG="${testStarshipConfig}"
+      export STARSHIP_BIN="${starshipBin}"
       rm -f "$CLAUDE_USAGE_CACHE"
     }
 
@@ -121,10 +175,13 @@ pkgs.runCommand "statusline-test"
       pkgs.bats.libraries.bats-assert
       statusline
       pkgs.git
+      pkgs.starship
     ];
   }
   ''
     export HOME=$(mktemp -d)
+    export STARSHIP_CONFIG="${testStarshipConfig}"
+    export STARSHIP_BIN="${starshipBin}"
     export BATS_LIB_PATH="${pkgs.bats.libraries.bats-support}/share/bats:${pkgs.bats.libraries.bats-assert}/share/bats"
     bats --print-output-on-failure ${testFile}
     touch $out

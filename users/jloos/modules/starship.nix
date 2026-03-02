@@ -1,4 +1,9 @@
 { lib, ... }:
+let
+  palette = import ./palette.nix;
+  # Powerline symbols as actual Unicode characters (via JSON decode)
+  pl = builtins.fromJSON ''{"arrow":"\uE0B0","lcap":"\uE0B6","flame":"\uE0C4"}'';
+in
 {
   programs.starship =
     let
@@ -64,18 +69,7 @@
           color_yellow = "#d79921";
         };
 
-        palettes.atelier-cave = {
-          color_fg0 = "#efecf4";
-          color_bg1 = "#19171c";
-          color_bg3 = "#655f6d";
-          color_blue = "#576ddb";
-          color_aqua = "#398bc6";
-          color_green = "#2a9292";
-          color_orange = "#aa573c";
-          color_purple = "#955ae7";
-          color_red = "#be4678";
-          color_yellow = "#a06e3b";
-        };
+        palettes.atelier-cave = palette;
 
         format = lib.replaceStrings [ "\n" ] [ "" ] ''
           [](color_orange)
@@ -248,6 +242,39 @@
           fish_indicator = "🐟";
           bash_indicator = "🐚";
           style = "cyan bold";
+        };
+        # ── Claude Code statusline profile ──────────────────────
+        # Rendered by `starship prompt --profile claude`.
+        # env_var modules are no-ops in the normal shell prompt
+        # because the CLAUDE_* vars are never set there.
+
+        profiles.claude = lib.replaceStrings [ "\n" ] [ "" ] ''
+          [${pl.lcap}](color_orange)
+          ''${env_var.CLAUDE_DIR}
+          ([${pl.arrow}](fg:color_orange bg:color_aqua)$git_branch$git_status[${pl.arrow}](fg:color_aqua bg:color_blue))
+          ''${env_var.CLAUDE_NO_GIT}
+          ''${env_var.CLAUDE_MODEL}
+          ([${pl.arrow}](fg:color_blue bg:color_purple)''${env_var.CLAUDE_USAGE}[${pl.flame}](fg:color_purple bg:color_bg1))
+          ''${env_var.CLAUDE_NO_USAGE}
+          (''${env_var.CLAUDE_CTX})
+          ([${pl.flame}](bg:color_bg1)''${env_var.CLAUDE_STYLE})
+          ''${env_var.CLAUDE_CLOSE_DARK}
+          ''${env_var.CLAUDE_CLOSE_BLUE}
+        '';
+
+        # env_var sub-modules (nested so TOML generates [env_var.X] sections)
+        env_var = {
+          # Content modules
+          CLAUDE_DIR.format = "[ $env_value ](fg:color_fg0 bg:color_orange)";
+          CLAUDE_MODEL.format = "[ $env_value ](fg:color_fg0 bg:color_blue)";
+          CLAUDE_USAGE.format = "[ $env_value ](fg:color_fg0 bg:color_purple)";
+          CLAUDE_CTX.format = "[ $env_value ](fg:color_fg0 bg:color_bg1)";
+          CLAUDE_STYLE.format = "[ $env_value ](fg:color_fg0 bg:color_bg1)";
+          # Sentinel modules — transitions when optional segments are absent
+          CLAUDE_NO_GIT.format = "[${pl.arrow}](fg:color_orange bg:color_blue)";
+          CLAUDE_NO_USAGE.format = "[${pl.flame}](fg:color_blue bg:color_bg1)";
+          CLAUDE_CLOSE_DARK.format = "[${pl.arrow}](fg:color_bg1)";
+          CLAUDE_CLOSE_BLUE.format = "[${pl.arrow}](fg:color_blue)";
         };
       }
       // languages;
