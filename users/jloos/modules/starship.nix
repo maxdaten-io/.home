@@ -2,7 +2,7 @@
 let
   palette = import ./palette.nix;
   # Powerline symbols as actual Unicode characters (via JSON decode)
-  pl = builtins.fromJSON ''{"arrow":"\uE0B0","lcap":"\uE0B6","flame":"\uE0C4"}'';
+  pl = builtins.fromJSON ''{"arrow":"\uE0B0","lcap":"\uE0B6","rcap":"\uE0B4","flame":"\uE0C4"}'';
 in
 {
   programs.starship =
@@ -72,28 +72,28 @@ in
         palettes.atelier-cave = palette;
 
         format = lib.replaceStrings [ "\n" ] [ "" ] ''
-          [](color_orange)
+          [${pl.lcap}](color_orange)
           $os
           $username
-          [](bg:color_yellow fg:color_orange)
+          [${pl.arrow}](bg:color_yellow fg:color_orange)
           $directory
           $nix_shell
-          [](fg:color_yellow bg:color_aqua)
+          [${pl.arrow}](fg:color_yellow bg:color_aqua)
           $git_branch
           $git_status
-          [](fg:color_aqua bg:color_blue)
+          [${pl.arrow}](fg:color_aqua bg:color_blue)
           [$all](fg:color_aqua bg:color_blue)
-          [](fg:color_blue bg:color_bg3)
+          [${pl.arrow}](fg:color_blue bg:color_bg3)
           $docker_context
           $kubernetes
           $aws
           $gcloud
           $azure
-          [](fg:color_bg3 bg:color_bg1)
+          [${pl.arrow}](fg:color_bg3 bg:color_bg1)
           $time
           $memory_usage
           $cmd_duration
-          [ ](fg:color_bg1)
+          [${pl.rcap} ](fg:color_bg1)
           $line_break$jobs$shell$status$character '';
 
         os = {
