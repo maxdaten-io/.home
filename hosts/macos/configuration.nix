@@ -1,6 +1,7 @@
 {
   pkgs,
   config,
+  inputs,
   ...
 }:
 {
@@ -21,8 +22,8 @@
 
     nixfmt
     nixd
-    devenv
-    # inputs.devenv.packages.${pkgs.system}.devenv
+    # devenv
+    inputs.devenv.packages.${pkgs.system}.devenv
     direnv
   ];
 
