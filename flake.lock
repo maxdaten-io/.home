@@ -101,11 +101,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1772410224,
-        "narHash": "sha256-I5tdaKQbmMmGJWCsNzJuMz0PHIwPx5G60VOh2z9rfRo=",
+        "lastModified": 1772491826,
+        "narHash": "sha256-6ale5Tqr0RgxOIGPpGR1KwdCFb7Xu+JOT6W3q9MZNGY=",
         "owner": "cachix",
         "repo": "devenv",
-        "rev": "4fafd42cd1bb3bf7942e907c52f40d0acc6c3c06",
+        "rev": "3f0b902bb39c4621cf1859f0b25c042dd5dd2191",
         "type": "github"
       },
       "original": {
@@ -596,7 +596,6 @@
         "nixpkgs": "nixpkgs_2",
         "nnf": "nnf",
         "raspberry-pi-nix": "raspberry-pi-nix",
-        "sidequery-homebrew-tap": "sidequery-homebrew-tap",
         "sops-nix": "sops-nix",
         "treefmt-nix": "treefmt-nix_2"
       }
@@ -700,22 +699,6 @@
         "owner": "raspberrypi",
         "ref": "v1.5.0",
         "repo": "rpicam-apps",
-        "type": "github"
-      }
-    },
-    "sidequery-homebrew-tap": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1772393710,
-        "narHash": "sha256-EgDlxr0gVZ1GOlw0VOtSiOpx6wbfGPdFOhE4UEhaJfM=",
-        "owner": "sidequery",
-        "repo": "homebrew-tap",
-        "rev": "76ba411143c478ceb2f5a23cf48469df630e7512",
-        "type": "github"
-      },
-      "original": {
-        "owner": "sidequery",
-        "repo": "homebrew-tap",
         "type": "github"
       }
     },

@@ -25,10 +25,6 @@
       url = "github:homebrew/homebrew-cask";
       flake = false;
     };
-    sidequery-homebrew-tap = {
-      url = "github:sidequery/homebrew-tap";
-      flake = false;
-    };
 
     flake-parts.url = "github:hercules-ci/flake-parts";
 
