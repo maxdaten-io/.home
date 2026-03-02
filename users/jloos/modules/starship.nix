@@ -142,10 +142,10 @@ in
         };
 
         nix_shell = {
-          format = "[ $symbol$state ]($style)";
+          format = "[$symbol$state ]($style)";
           impure_msg = "";
           pure_msg = "λ";
-          symbol = "";
+          symbol = builtins.fromJSON ''"\uF313"'';
           style = "fg:color_fg0 bg:color_yellow";
         };
 
