@@ -84,6 +84,7 @@ in
       x = "xgpt4";
       zed = "zeditor";
       agy = "/Applications/Antigravity.app/Contents/MacOS/Electron";
+      dev = "devenv shell -- $SHELL";
     };
 
     shellInit = ''
