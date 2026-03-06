@@ -3,88 +3,57 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-NIX_FILE="$REPO_ROOT/users/jloos/modules/claude-code.nix"
-LOCK_FILE="$REPO_ROOT/users/jloos/modules/claude-code/package-lock.json"
 
-# Get version from argument or fetch latest
-if [[ $# -ge 1 && $1 == "latest" ]]; then
-  echo "Fetching latest version from GitHub tags..."
-  VERSION=$(git ls-remote --tags --refs https://github.com/anthropics/claude-code |
+# ---------------------------------------------------------------------------
+# Package configuration
+# ---------------------------------------------------------------------------
+export NPM_PACKAGE="@anthropic-ai/claude-code"
+export NIX_FILE="$REPO_ROOT/users/jloos/modules/claude-code.nix"
+export LOCK_FILE="$REPO_ROOT/users/jloos/modules/claude-code/package-lock.json"
+export PACKAGE_DISPLAY_NAME="claude-code"
+
+GITHUB_REPO="https://github.com/anthropics/claude-code"
+
+# ---------------------------------------------------------------------------
+# Overrides
+# ---------------------------------------------------------------------------
+
+# Resolve latest version from GitHub tags (more reliable for this package).
+resolve_latest_version() {
+  echo "Fetching latest version from GitHub tags…" >&2
+  git ls-remote --tags --refs "$GITHUB_REPO" |
     sed 's|.*refs/tags/||' |
     sed 's/^v//' |
     sort -V |
-    tail -1)
-elif [[ $# -ge 1 ]]; then
-  VERSION="$1"
-else
-  echo "Usage: update-claude-code.sh <version|latest>"
-  exit 1
-fi
-
-CURRENT_VERSION=$(grep 'version = "' "$NIX_FILE" | head -1 | sed 's/.*version = "\([^"]*\)".*/\1/')
-
-echo "Current version: $CURRENT_VERSION"
-echo "Target version:  $VERSION"
-
-if [[ $CURRENT_VERSION == "$VERSION" ]]; then
-  echo "Already at version $VERSION"
-  exit 0
-fi
-
-echo ""
-echo "==> Fetching source hash..."
-SRC_HASH_RAW=$(nix-prefetch-url "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${VERSION}.tgz" 2>/dev/null)
-SRC_HASH=$(nix hash convert --to sri --hash-algo sha256 "$SRC_HASH_RAW")
-echo "Source hash: $SRC_HASH"
-
-echo ""
-echo "==> Generating package-lock.json..."
-TMPDIR=$(mktemp -d)
-trap 'rm -rf "$TMPDIR"' EXIT
-pushd "$TMPDIR" >/dev/null
-npm install "@anthropic-ai/claude-code@${VERSION}" --package-lock-only 2>/dev/null
-popd >/dev/null
-cp "$TMPDIR/package-lock.json" "$LOCK_FILE"
-echo "Updated: $LOCK_FILE"
-
-echo ""
-echo "==> Computing npmDepsHash..."
-NPM_DEPS_HASH=$(nix run nixpkgs#prefetch-npm-deps -- "$LOCK_FILE" 2>/dev/null)
-echo "npmDepsHash: $NPM_DEPS_HASH"
-
-echo ""
-echo "==> Updating $NIX_FILE..."
-
-# Update version
-sed -i "s/version = \"$CURRENT_VERSION\"/version = \"$VERSION\"/" "$NIX_FILE"
-
-# Update source hash (match the specific line pattern)
-sed -i "s|hash = \"sha256-[^\"]*\"|hash = \"$SRC_HASH\"|" "$NIX_FILE"
-
-# Update npmDepsHash
-sed -i "s|npmDepsHash = \"sha256-[^\"]*\"|npmDepsHash = \"$NPM_DEPS_HASH\"|" "$NIX_FILE"
-
-echo ""
-echo "==> Done! Updated claude-code: $CURRENT_VERSION -> $VERSION"
-echo ""
-echo "Changes:"
-git diff --stat "$NIX_FILE" "$LOCK_FILE" 2>/dev/null || true
-
-echo ""
-echo "==> Changelog highlights ($CURRENT_VERSION -> $VERSION):"
-echo ""
-CHANGELOG=$(curl -fsSL "https://raw.githubusercontent.com/anthropics/claude-code/refs/heads/main/CHANGELOG.md" 2>/dev/null) || {
-  echo "(Could not fetch changelog)"
-  exit 0
+    tail -1
 }
 
-# Extract entries from target version down to (excluding) current version
-echo "$CHANGELOG" | awk -v target="$VERSION" -v current="$CURRENT_VERSION" '
-  /^## / {
-    v = $2
-    gsub(/^v/, "", v)
-    if (v == target) { printing = 1 }
-    else if (v == current) { printing = 0 }
+# Show changelog highlights after a successful update.
+post_update_hook() {
+  local changelog
+  info "Changelog highlights (${OLD_VERSION} → ${NEW_VERSION}):"
+  echo ""
+
+  changelog=$(curl -fsSL "${GITHUB_REPO}/raw/refs/heads/main/CHANGELOG.md" 2>/dev/null) || {
+    warn "Could not fetch changelog"
+    return 0
   }
-  printing { print }
-'
+
+  echo "$changelog" | awk -v target="$NEW_VERSION" -v current="$OLD_VERSION" '
+    /^## / {
+      v = $2
+      gsub(/^v/, "", v)
+      if (v == target) { printing = 1 }
+      else if (v == current) { printing = 0 }
+    }
+    printing { print }
+  '
+}
+
+# ---------------------------------------------------------------------------
+# Run
+# ---------------------------------------------------------------------------
+# shellcheck disable=SC1091 source=lib/update-npm-package.sh
+source "$SCRIPT_DIR/lib/update-npm-package.sh"
+
+update_npm_package "${1:-}"
