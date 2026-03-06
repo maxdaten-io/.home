@@ -95,7 +95,7 @@ in
       tree
       wget
       pwgen
-      neofetch
+      fastfetch
       lsd
       fd
       rename
