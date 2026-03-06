@@ -53,7 +53,7 @@
       agent = {
         default_model = {
           provider = "anthropic";
-          model = "claude-sonet-4.5-latest";
+          model = "claude-opus-4.7-latest";
         };
       };
 
