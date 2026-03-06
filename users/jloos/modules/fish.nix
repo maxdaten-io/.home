@@ -85,7 +85,7 @@ in
       end
 
       tmux new-session -d -s $session_name -c $PWD
-      tmux split-window -v -l 30% -t $session_name -c $PWD
+      tmux split-window -v -l 20% -t $session_name -c $PWD
       tmux select-pane -t $session_name:0.0
       tmux send-keys -t $session_name:0.0 "claude $argv" Enter
       tmux attach -t $session_name
