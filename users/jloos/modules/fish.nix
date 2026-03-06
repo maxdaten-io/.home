@@ -14,45 +14,26 @@ in
     plugins = with pkgs.fishPlugins; [
       # https://mynixos.com/search?q=fishPlugins
       {
+        # Desktop notifications when long-running commands finish
         name = "done";
         src = done.src;
       }
-      # {
-      #   name = "foreign-env";
-      #   src = foreign-env.src;
-      # }
       {
+        # Colorizes man page output
         name = "colored-man-pages";
         src = colored-man-pages.src;
       }
       {
+        # FZF key bindings (Ctrl-R history, Ctrl-T file finder, Alt-C cd)
         name = "fzf";
         src = fzf.src;
       }
       {
+        # Auto-closes brackets, quotes, and other paired characters
         name = "autopair";
         src = autopair.src;
       }
-      {
-        # https://github.com/lilyball/nix-env.fish
-        # Setup nix environment in fish shell + completions of packages
-        name = "nix-env";
-        src = pkgs.fetchFromGitHub {
-          owner = "lilyball";
-          repo = "nix-env.fish";
-          rev = "7b65bd228429e852c8fdfa07601159130a818cfa";
-          hash = "sha256-RG/0rfhgq6aEKNZ0XwIqOaZ6K5S4+/Y5EEMnIdtfPhk=";
-        };
-      }
-      {
-        name = "pj";
-        src = pkgs.fetchFromGitHub {
-          owner = "oh-my-fish";
-          repo = "plugin-pj";
-          rev = "43c94f24fd53a55cb6b01400b9b39eb3b6ed7e4e";
-          hash = "sha256-/4c/52HLvycTPjuiMKC949XYLPNJUhedd3xEV/ioxfw=";
-        };
-      }
+
     ];
 
     shellAbbrs = lib.mkMerge [
@@ -61,7 +42,7 @@ in
         gitrb = "git rebase --autostash";
         gitcm = "git commit -m";
         gitca = "git commit --amend --no-edit";
-        pjo = "pj open";
+
         tp = "terraform plan";
         ta = "terraform apply";
         tay = "terraform apply --yes";
