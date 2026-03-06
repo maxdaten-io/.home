@@ -113,7 +113,8 @@ nix_npm_deps_hash() {
 nix_set_field() {
   local file="$1" key="$2" value="$3"
   # Match:  key = "..." (with arbitrary whitespace around '=')
-  sed -i "s|${key} = \"[^\"]*\"|${key} = \"${value}\"|" "$file"
+  # Use sed -i '' for macOS BSD sed compatibility
+  sed -i '' "s|${key} = \"[^\"]*\"|${key} = \"${value}\"|" "$file"
 }
 
 # ---------------------------------------------------------------------------

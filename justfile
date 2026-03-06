@@ -29,6 +29,8 @@ update:
     devenv update
     git add devenv.lock && git commit -m "chore(devenv): Update devenv.lock" || true
     nix flake update --commit-lock-file
+    just _update-and-commit-npm claude-code
+    just _update-and-commit-npm playwright-cli
 
 # Update flake inputs and switch in one command
 update-switch: update fmt switch
@@ -56,3 +58,17 @@ update-claude-code version="":
 # Update playwright-cli to a specific version (or latest if no version given)
 update-playwright-cli version="":
     ./scripts/update-playwright-cli.sh {{version}}
+
+# Internal: update an npm package to latest and commit atomically if changed
+_update-and-commit-npm name:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    nix_file="users/jloos/modules/{{name}}.nix"
+    lock_file="users/jloos/modules/{{name}}/package-lock.json"
+    old_version=$(grep 'version = "' "$nix_file" | head -1 | sed 's/.*version = "\([^"]*\)".*/\1/')
+    ./scripts/update-{{name}}.sh latest
+    new_version=$(grep 'version = "' "$nix_file" | head -1 | sed 's/.*version = "\([^"]*\)".*/\1/')
+    if [[ "$old_version" != "$new_version" ]]; then
+        git add "$nix_file" "$lock_file"
+        git commit -m "build({{name}}): ${old_version} → ${new_version}"
+    fi
