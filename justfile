@@ -52,3 +52,7 @@ run-hooks:
 # Update claude-code to a specific version (or latest if no version given)
 update-claude-code version="":
     ./scripts/update-claude-code.sh {{version}}
+
+# Update playwright-cli to a specific version (or latest if no version given)
+update-playwright-cli version="":
+    ./scripts/update-playwright-cli.sh {{version}}
