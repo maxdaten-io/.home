@@ -88,14 +88,6 @@ in
       git-ignore
       lazygit
 
-      # GNU replacements for outdated macOS BSD tools
-      coreutils
-      gnused
-      gnugrep
-      findutils
-      gawk
-      diffutils
-
       # shell tools
       ripgrep
       bats

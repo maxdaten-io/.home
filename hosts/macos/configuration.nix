@@ -20,6 +20,14 @@
     rsync
     mas
 
+    # GNU replacements for outdated macOS BSD tools
+    coreutils
+    gnused
+    gnugrep
+    findutils
+    gawk
+    diffutils
+
     nixfmt
     nixd
     # devenv
