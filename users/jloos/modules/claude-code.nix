@@ -12,6 +12,8 @@ let
     threadedRuntime = false;
   } (builtins.readFile ./claude-code/statusline.hs);
 
+  claude-python = pkgs.python3.withPackages (ps: [ ps.anthropic ]);
+
   claude-statusline = pkgs.symlinkJoin {
     name = "claude-statusline-wrapped";
     paths = [ claude-statusline-unwrapped ];
@@ -85,6 +87,7 @@ in
           --set ENABLE_CLAUDEAI_MCP_SERVERS false \
           --run 'export GITHUB_PERSONAL_ACCESS_TOKEN=$(security find-generic-password -s "github-pat" -w 2>/dev/null)' \
           --run 'export ANTHROPIC_API_KEY=$(security find-generic-password -s "anthropic-api-key" -w 2>/dev/null)' \
+          --prefix PATH : "${claude-python}/bin" \
           --unset DEV
       '';
 
