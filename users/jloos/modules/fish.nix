@@ -70,6 +70,14 @@ in
       ${if trace then "set -U fish_trace 2" else "set -e fish_trace"}
       set -U fish_greeting
       set __done_enabled
+
+      # Load GitHub PAT from macOS Keychain
+      if type -q security
+        set -l gh_token (security find-generic-password -s "github-pat" -w 2>/dev/null)
+        if test -n "$gh_token"
+          set -gx GITHUB_PERSONAL_ACCESS_TOKEN $gh_token
+        end
+      end
     '';
 
     functions.fish_reload = "source ~/.config/fish/config.fish";
