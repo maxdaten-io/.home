@@ -31,6 +31,7 @@ update:
     nix flake update --commit-lock-file
     just _update-and-commit-npm claude-code
     just _update-and-commit-npm playwright-cli
+    just _update-and-commit-pypi notebooklm
 
 # Update flake inputs and switch in one command
 update-switch: update fmt switch
@@ -58,6 +59,23 @@ update-claude-code version="":
 # Update playwright-cli to a specific version (or latest if no version given)
 update-playwright-cli version="":
     ./scripts/update-playwright-cli.sh {{version}}
+
+# Update notebooklm to a specific version (or latest if no version given)
+update-notebooklm version="":
+    ./scripts/update-notebooklm.sh {{version}}
+
+# Internal: update a PyPI package to latest and commit atomically if changed
+_update-and-commit-pypi name:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    nix_file="users/jloos/modules/claude-code.nix"
+    old_version=$(awk '/pname = "notebooklm-py"/{found=1} found && /version = "/{gsub(/.*version = "/,""); gsub(/".*/,""); print; exit}' "$nix_file")
+    ./scripts/update-{{name}}.sh latest
+    new_version=$(awk '/pname = "notebooklm-py"/{found=1} found && /version = "/{gsub(/.*version = "/,""); gsub(/".*/,""); print; exit}' "$nix_file")
+    if [[ "$old_version" != "$new_version" ]]; then
+        git add "$nix_file"
+        git commit -m "build({{name}}): ${old_version} → ${new_version}"
+    fi
 
 # Internal: update an npm package to latest and commit atomically if changed
 _update-and-commit-npm name:
