@@ -14,6 +14,46 @@ let
 
   claude-python = pkgs.python3.withPackages (ps: [ ps.anthropic ]);
 
+  notebooklm = pkgs.python312Packages.buildPythonApplication rec {
+    pname = "notebooklm-py";
+    version = "0.3.3";
+    pyproject = true;
+
+    src = pkgs.fetchPypi {
+      pname = "notebooklm_py";
+      inherit version;
+      hash = "sha256-3ClBsK1Qg0OTaB9S8dGK6HsWef4YimOjZVVE7mwYxjo=";
+    };
+
+    build-system = with pkgs.python312Packages; [
+      hatchling
+      hatch-fancy-pypi-readme
+    ];
+
+    dependencies = with pkgs.python312Packages; [
+      httpx
+      click
+      rich
+      playwright
+    ];
+
+    doCheck = false;
+
+    nativeBuildInputs = [ pkgs.makeWrapper ];
+
+    postInstall = ''
+      wrapProgram $out/bin/notebooklm \
+        --set PLAYWRIGHT_BROWSERS_PATH "${pkgs.playwright-driver.browsers}"
+    '';
+
+    meta = with pkgs.lib; {
+      description = "Unofficial Python API for Google NotebookLM";
+      homepage = "https://github.com/teng-lin/notebooklm-py";
+      license = licenses.mit;
+      mainProgram = "notebooklm";
+    };
+  };
+
   claude-statusline = pkgs.symlinkJoin {
     name = "claude-statusline-wrapped";
     paths = [ claude-statusline-unwrapped ];
@@ -61,6 +101,7 @@ in
   };
 
   home.packages = with pkgs; [
+    notebooklm
     (pkgs.buildNpmPackage rec {
       pname = "claude-code";
       version = "2.1.71";
