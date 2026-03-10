@@ -109,11 +109,24 @@ nix_npm_deps_hash() {
 # ---------------------------------------------------------------------------
 
 # Replace a quoted value in a Nix file:  key = "old" → key = "new"
-# Uses the first match only to avoid clobbering unrelated fields.
+# Only replaces the first occurrence after PACKAGE_ANCHOR (if set),
+# otherwise replaces ALL matches.
+# PACKAGE_ANCHOR should uniquely identify the package block,
+# e.g. 'pname = "claude-code"'.
 nix_set_field() {
   local file="$1" key="$2" value="$3"
-  # Match:  key = "..." (with arbitrary whitespace around '=')
-  sed -i "s|${key} = \"[^\"]*\"|${key} = \"${value}\"|" "$file"
+  if [[ -n ${PACKAGE_ANCHOR:-} ]]; then
+    awk -v anchor="$PACKAGE_ANCHOR" -v key="$key" -v val="$value" '
+      !found && index($0, anchor) { in_block=1 }
+      in_block && !found && $0 ~ key " = \"" {
+        sub(key " = \"[^\"]*\"", key " = \"" val "\"")
+        found=1
+      }
+      { print }
+    ' "$file" >"${file}.tmp" && mv "${file}.tmp" "$file"
+  else
+    sed -i "s|${key} = \"[^\"]*\"|${key} = \"${value}\"|" "$file"
+  fi
 }
 
 # ---------------------------------------------------------------------------
@@ -169,8 +182,15 @@ update_npm_package() {
   esac
 
   # --- read current version from nix file ---
-  OLD_VERSION=$(grep 'version = "' "$NIX_FILE" | head -1 |
-    sed 's/.*version = "\([^"]*\)".*/\1/')
+  if [[ -n ${PACKAGE_ANCHOR:-} ]]; then
+    OLD_VERSION=$(awk -v anchor="$PACKAGE_ANCHOR" '
+      index($0, anchor) { found=1 }
+      found && /version = "/ { gsub(/.*version = "/, ""); gsub(/".*/, ""); print; exit }
+    ' "$NIX_FILE")
+  else
+    OLD_VERSION=$(grep 'version = "' "$NIX_FILE" | head -1 |
+      sed 's/.*version = "\([^"]*\)".*/\1/')
+  fi
   NEW_VERSION="$version"
   export OLD_VERSION NEW_VERSION
 

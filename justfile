@@ -83,9 +83,16 @@ _update-and-commit-npm name:
     set -euo pipefail
     nix_file="users/jloos/modules/{{name}}.nix"
     lock_file="users/jloos/modules/{{name}}/package-lock.json"
-    old_version=$(grep 'version = "' "$nix_file" | head -1 | sed 's/.*version = "\([^"]*\)".*/\1/')
+    # Extract version scoped to the right pname block
+    extract_version() {
+        awk -v anchor='pname = "{{name}}"' '
+            index($0, anchor) { found=1 }
+            found && /version = "/ { gsub(/.*version = "/, ""); gsub(/".*/, ""); print; exit }
+        ' "$1"
+    }
+    old_version=$(extract_version "$nix_file")
     ./scripts/update-{{name}}.sh latest
-    new_version=$(grep 'version = "' "$nix_file" | head -1 | sed 's/.*version = "\([^"]*\)".*/\1/')
+    new_version=$(extract_version "$nix_file")
     if [[ "$old_version" != "$new_version" ]]; then
         git add "$nix_file" "$lock_file"
         git commit -m "build({{name}}): ${old_version} → ${new_version}"
