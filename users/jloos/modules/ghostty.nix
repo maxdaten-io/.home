@@ -9,6 +9,8 @@
     theme = atelier-cave
 
     working-directory = ${config.home.homeDirectory}/Developer
+    split-inherit-working-directory = true
+    tab-inherit-working-directory = false
     window-inherit-working-directory = false
 
     split-divider-color = #955ae7
