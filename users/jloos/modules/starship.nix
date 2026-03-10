@@ -90,7 +90,6 @@ in
           $gcloud
           $azure
           [${pl.arrow}](fg:color_bg3 bg:color_bg1)
-          $time
           $memory_usage
           $cmd_duration
           [${pl.rcap} ](fg:color_bg1)
@@ -191,7 +190,7 @@ in
         # System View
 
         time = {
-          disabled = false;
+          disabled = true;
           format = "[[  $time ](fg:color_fg0 bg:color_bg1)]($style)";
           style = "bg:color_bg1";
           time_format = "%R";
