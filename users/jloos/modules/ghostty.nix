@@ -7,6 +7,7 @@
   xdg.configFile."ghostty/config".text = ''
     # Theme & Appearance
     theme = atelier-cave
+    background-blur = true
 
     working-directory = ${config.home.homeDirectory}/Developer
     split-inherit-working-directory = true
