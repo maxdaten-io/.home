@@ -19,6 +19,10 @@
     keybind = opt+backspace=text:\x17
 
     font-size = 15
+
+    # Notify when long-running commands finish in unfocused terminals
+    notify-on-command-finish = unfocused
+    notify-on-command-finish-after = 10s
   '';
 
   # theme
