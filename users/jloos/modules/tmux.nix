@@ -55,7 +55,8 @@
       set -g status-left-length 100
       set -g status-right-length 100
       set -g status-left "#{E:@catppuccin_status_session}"
-      set -gF status-right "#{E:@catppuccin_status_cpu}"
+      set -g status-right "#{E:@catppuccin_status_application}"
+      set -agF status-right "#{E:@catppuccin_status_cpu}"
       set -ag status-right "#{E:@catppuccin_status_date_time}"
 
       # tmux-cpu must load AFTER status-right is set
