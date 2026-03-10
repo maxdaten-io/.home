@@ -53,6 +53,10 @@
       set -g window-style "bg=default"
       set -g window-active-style "bg=default"
 
+      # Match Ghostty scroll speed (1 line per tick)
+      bind -T copy-mode WheelUpPane send-keys -X -N 1 scroll-up
+      bind -T copy-mode WheelDownPane send-keys -X -N 1 scroll-down
+
       # Status bar (must be after catppuccin plugin loads)
       set -g status-left-length 100
       set -g status-right-length 100
