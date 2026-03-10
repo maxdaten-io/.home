@@ -46,6 +46,7 @@
     '';
     plugins = with pkgs; [
       tmuxPlugins.cpu
+      tmuxPlugins.tmux-fzf
       {
         plugin = tmuxPlugins.resurrect;
         extraConfig = "set -g @resurrect-strategy-nvim 'session'";
