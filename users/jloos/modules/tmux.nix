@@ -41,6 +41,8 @@
     terminal = "tmux-256color";
     extraConfig = ''
       set -ag terminal-overrides ",*:RGB"
+      # Allow OSC 8 hyperlinks to pass through to Ghostty
+      set -ag terminal-features ",*:hyperlinks"
       set -g status-position bottom
       # Gap between panes and status bar
       set -g pane-border-status bottom
