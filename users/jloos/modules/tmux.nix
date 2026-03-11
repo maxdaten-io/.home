@@ -41,6 +41,7 @@
     terminal = "tmux-256color";
     extraConfig = ''
       set -ag terminal-overrides ",*:RGB"
+      set -g focus-events on
       # Allow OSC 8 hyperlinks to pass through to Ghostty
       set -ag terminal-features ",*:hyperlinks"
       set -g status-position bottom
@@ -50,8 +51,8 @@
       set -g base-index 1
       setw -g pane-base-index 1
       set -g renumber-windows on
-      set -g window-style "bg=default"
-      set -g window-active-style "bg=default"
+      set -g window-style "bg=#1c1c1e"
+      set -g window-active-style "bg=terminal"
 
       # Match Ghostty scroll speed (1 line per tick)
       bind -T copy-mode WheelUpPane send-keys -X -N 1 scroll-up
