@@ -4,6 +4,55 @@
   lib,
   ...
 }:
+let
+  palette = import ./palette.nix;
+
+  # Atelier Cave theme for catppuccin/tmux
+  # Maps the base16 Atelier Cave palette to catppuccin's @thm_* variables.
+  # Base tones interpolated from base00(#19171c)–base07(#efecf4).
+  # Accent variants derived from the 8 Atelier Cave accent colors.
+  atelierCaveTheme = pkgs.writeText "catppuccin_atelier-cave_tmux.conf" ''
+    # Atelier Cave — custom catppuccin theme
+    # Base colors
+    set -ogq @thm_bg "#26232a"
+    set -ogq @thm_fg "${palette.color_fg0}"
+
+    # Accent colors
+    set -ogq @thm_rosewater "#e2dfe7"
+    set -ogq @thm_flamingo "#d06a94"
+    set -ogq @thm_pink "#bf40bf"
+    set -ogq @thm_mauve "${palette.color_purple}"
+    set -ogq @thm_red "${palette.color_red}"
+    set -ogq @thm_maroon "#c0625a"
+    set -ogq @thm_peach "${palette.color_orange}"
+    set -ogq @thm_yellow "${palette.color_yellow}"
+    set -ogq @thm_green "${palette.color_green}"
+    set -ogq @thm_teal "#359e9e"
+    set -ogq @thm_sky "#5ba0d0"
+    set -ogq @thm_sapphire "${palette.color_aqua}"
+    set -ogq @thm_blue "${palette.color_blue}"
+    set -ogq @thm_lavender "#a87ceb"
+
+    # Surface & overlay scale (dark → light)
+    set -ogq @thm_subtext_1 "#a8a4ae"
+    set -ogq @thm_subtext_0 "#c5c2cb"
+    set -ogq @thm_overlay_2 "#8b8792"
+    set -ogq @thm_overlay_1 "#7e7887"
+    set -ogq @thm_overlay_0 "${palette.color_bg3}"
+    set -ogq @thm_surface_2 "#585260"
+    set -ogq @thm_surface_1 "#47424e"
+    set -ogq @thm_surface_0 "#37333c"
+    set -ogq @thm_mantle "${palette.color_bg1}"
+    set -ogq @thm_crust "#110f15"
+  '';
+
+  # Patch catppuccin plugin to include the custom theme
+  catppuccinWithCave = pkgs.tmuxPlugins.catppuccin.overrideAttrs (old: {
+    postInstall = (old.postInstall or "") + ''
+      cp ${atelierCaveTheme} $out/share/tmux-plugins/catppuccin/themes/catppuccin_atelier-cave_tmux.conf
+    '';
+  });
+in
 {
   programs.fish.functions = lib.mkIf config.programs.fish.enable {
     tmux-project = ''
@@ -51,7 +100,7 @@
       set -g base-index 1
       setw -g pane-base-index 1
       set -g renumber-windows on
-      set -g window-style "bg=#1c1c1e"
+      set -g window-style "bg=#26232a"
       set -g window-active-style "bg=terminal"
 
       # Match Ghostty scroll speed (1 line per tick)
@@ -72,9 +121,9 @@
     plugins = with pkgs; [
       tmuxPlugins.tmux-fzf
       {
-        plugin = tmuxPlugins.catppuccin;
+        plugin = catppuccinWithCave;
         extraConfig = ''
-          set -g @catppuccin_flavor "mocha"
+          set -g @catppuccin_flavor "atelier-cave"
           set -g @catppuccin_window_text " #W #{b:pane_current_path}"
           set -g @catppuccin_window_status_style "rounded"
           set -g @catppuccin_date_time_text " %H:%M"
