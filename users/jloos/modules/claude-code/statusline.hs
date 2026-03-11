@@ -31,7 +31,6 @@ data StatusInput = StatusInput
     { model :: Maybe ModelInfo
     , workspace :: Maybe WorkspaceInfo
     , context_window :: Maybe ContextWindow
-    , output_style :: Maybe StyleInfo
     }
     deriving (Generic)
 instance FromJSON StatusInput
@@ -50,9 +49,6 @@ data ContextWindow = ContextWindow
     }
     deriving (Generic)
 instance FromJSON ContextWindow
-
-newtype StyleInfo = StyleInfo {name :: String} deriving (Generic)
-instance FromJSON StyleInfo
 
 -- Credentials file (~/.claude/.credentials.json)
 newtype CredFile = CredFile {claudeAiOauth :: Maybe OAuthCred} deriving (Generic)
@@ -77,7 +73,7 @@ data UsageCache = UsageCache
 instance FromJSON UsageCache
 
 emptyInput :: StatusInput
-emptyInput = StatusInput Nothing Nothing Nothing Nothing
+emptyInput = StatusInput Nothing Nothing Nothing
 
 ----------------------- Formatting --------------------------
 
@@ -100,14 +96,6 @@ formatCountdown dt
     rMins = (secs `mod` 3600) `div` 60
     days = secs `div` 86400
     rHrs = (secs `mod` 86400) `div` 3600
-
-formatUtil :: Double -> Maybe UTCTime -> UTCTime -> String
-formatUtil util mReset now =
-    show (round util :: Int)
-        ++ "%"
-        ++ case mReset of
-            Nothing -> ""
-            Just resetAt -> " (" ++ formatCountdown (diffUTCTime resetAt now) ++ ")"
 
 ----------------------- Usage cache -------------------------
 
@@ -194,14 +182,13 @@ runFetch = void $ runMaybeT $ do
 
 ------------------- Nerd font icons -------------------------
 
-iconNix, iconFolder, iconRocket, iconBattery, iconCalendar, iconBrain, iconBrush :: Char
+iconNix, iconFolder, iconRocket, iconBattery, iconCalendar, iconBrain :: Char
 iconNix = '\xF313' -- nf-linux-nixos
 iconFolder = '\xF07B' -- nf-fa-folder
 iconRocket = '\xF135' -- nf-fa-rocket
 iconBattery = '\xF0079' -- nf-md-battery_50
 iconCalendar = '\xF051B' -- nf-md-calendar_clock
 iconBrain = '\xF02A0' -- nf-md-brain
-iconBrush = '\xF1FC' -- nf-fa-paint_brush
 
 -------------------- Terminal width -------------------------
 
@@ -239,7 +226,6 @@ runStatusline = do
 
     let cwd = maybe "" current_dir (workspace si)
         mdl = maybe "" display_name (model si)
-        styl = maybe "" name (output_style si)
         mCtx = context_window si
         ctxPct = remaining_percentage =<< mCtx
         inTok = fromMaybe 0 (total_input_tokens =<< mCtx)
@@ -260,13 +246,15 @@ runStatusline = do
     -- Build content strings
     let dir = takeFileName cwd
 
-        fmt5h u = [iconBattery] ++ " 5h " ++ formatUtil u (fiveHourReset usage) now
-        fmt7d u = [iconCalendar] ++ " 7d " ++ formatUtil u (sevenDayReset usage) now
+        fmtPct u = show (round u :: Int) ++ "%"
+        fmtReset mR = case mR of
+            Nothing -> ""
+            Just r -> " " ++ formatCountdown (diffUTCTime r now)
         usageStr = case (fiveHourUtil usage, sevenDayUtil usage) of
             (Nothing, Nothing) -> Nothing
-            (Just u5, Nothing) -> Just $ fmt5h u5
-            (Nothing, Just u7) -> Just $ fmt7d u7
-            (Just u5, Just u7) -> Just $ fmt5h u5 ++ " " ++ fmt7d u7
+            (Just u5, Nothing) -> Just $ [iconBattery] ++ " " ++ fmtPct u5 ++ fmtReset (fiveHourReset usage)
+            (Nothing, Just u7) -> Just $ [iconCalendar] ++ " " ++ fmtPct u7 ++ fmtReset (sevenDayReset usage)
+            (Just u5, Just u7) -> Just $ [iconBattery] ++ " " ++ fmtPct u5 ++ fmtReset (fiveHourReset usage) ++ " " ++ [iconCalendar] ++ " " ++ fmtPct u7 ++ fmtReset (sevenDayReset usage)
 
         totalTok = inTok + outTok
         ctxStr = case ctxPct of
@@ -291,12 +279,8 @@ runStatusline = do
                 | otherwise ->
                     Just $ [iconBrain, ' '] ++ show (round p :: Int) ++ "%"
 
-        styleStr
-            | null styl || styl == "default" = Nothing
-            | otherwise = Just $ [iconBrush, ' '] ++ styl
-
         hasUsage = isJust usageStr
-        hasDark = isJust ctxStr || isJust styleStr
+        hasDark = isJust ctxStr
 
     -- Build env var list for Starship
     let envs =
@@ -305,7 +289,6 @@ runStatusline = do
                 , Just ("CLAUDE_MODEL", [iconRocket, ' '] ++ mdl)
                 , fmap ("CLAUDE_USAGE",) usageStr
                 , fmap ("CLAUDE_CTX",) ctxStr
-                , fmap ("CLAUDE_STYLE",) styleStr
                 , if hasGit then Nothing else Just ("CLAUDE_NO_GIT", "1")
                 , -- Right side sentinels
                   if hasUsage && hasDark then Just ("CLAUDE_R_U2D", "1") else Nothing

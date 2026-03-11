@@ -272,7 +272,7 @@ in
           (''${env_var.CLAUDE_R_U2D})
           (''${env_var.CLAUDE_R_UEND})
           (''${env_var.CLAUDE_R_DOPEN})
-          (''${env_var.CLAUDE_CTX}''${env_var.CLAUDE_STYLE}[${pl.rcap}](fg:color_bg3))
+          (''${env_var.CLAUDE_CTX}[${pl.rcap}](fg:color_bg3))
         '';
 
         # env_var sub-modules (nested so TOML generates [env_var.X] sections)
@@ -282,7 +282,6 @@ in
           CLAUDE_MODEL.format = "[ $env_value ](fg:color_fg0 bg:color_blue_a11y)";
           CLAUDE_USAGE.format = "[ $env_value ](fg:color_fg0 bg:color_purple_a11y)";
           CLAUDE_CTX.format = "[ $env_value ](fg:color_fg0 bg:color_bg3)";
-          CLAUDE_STYLE.format = "[ $env_value ](fg:color_fg0 bg:color_bg3)";
           # Left sentinel
           CLAUDE_NO_GIT.format = "[${pl.arrow}](fg:color_orange_a11y bg:color_blue_a11y)";
           # Right side sentinels
