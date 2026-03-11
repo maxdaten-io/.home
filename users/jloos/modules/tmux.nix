@@ -126,7 +126,8 @@ in
           set -g @catppuccin_flavor "atelier-cave"
           set -g @catppuccin_window_text " #W #{b:pane_current_path}"
           set -g @catppuccin_window_status_style "rounded"
-          set -g @catppuccin_date_time_text " %H:%M"
+          set -g @catppuccin_date_time_text " %d.%m. %H:%M"
+
         '';
       }
       {

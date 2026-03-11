@@ -14,9 +14,9 @@ in
         }:
         {
           disabled = false;
-          format = "[[ $symbol( $version) ](fg:color_fg0 bg:color_blue_a11y)]($style)";
+          format = "[[ $symbol( $version) ](fg:color_fg0 bg:color_blue)]($style)";
           inherit symbol;
-          style = "bg:color_blue_a11y";
+          style = "bg:color_blue";
         };
 
       # Language configurations with their symbols
@@ -73,28 +73,23 @@ in
         # Darkened variants of accent colors to achieve ≥4.5:1 contrast
         # with color_fg0 (#efecf4) as foreground text.
         palettes.atelier-cave = palette // {
-          # Prompt bg variants (darkened for ≥4.5:1 with #efecf4)
-          color_orange_a11y = "#9e5137"; # 4.88:1
-          color_yellow_a11y = "#885e32"; # 4.87:1
-          color_blue_a11y = "#4b5fbe"; # 4.88:1
-          color_purple_a11y = "#7548b8"; # 5.33:1
           # System section text (Atelier Cave base05, 5.06:1 on bg1)
           color_text_dim = "#8b8792";
         };
 
         format = lib.replaceStrings [ "\n" ] [ "" ] ''
-          [${pl.lcap}](color_orange_a11y)
+          [${pl.lcap}](color_orange)
           $os
           $username
-          [${pl.arrow}](bg:color_yellow_a11y fg:color_orange_a11y)
+          [${pl.arrow}](bg:color_yellow fg:color_orange)
           $directory
           $nix_shell
-          [${pl.arrow}](fg:color_yellow_a11y bg:color_aqua)
+          [${pl.arrow}](fg:color_yellow bg:color_aqua)
           $git_branch
           $git_status
-          [${pl.arrow}](fg:color_aqua bg:color_blue_a11y)
-          [$all](fg:color_aqua bg:color_blue_a11y)
-          [${pl.arrow}](fg:color_blue_a11y bg:color_bg3)
+          [${pl.arrow}](fg:color_aqua bg:color_blue)
+          [$all](fg:color_aqua bg:color_blue)
+          [${pl.arrow}](fg:color_blue bg:color_bg3)
           $docker_context
           $kubernetes
           $aws
@@ -108,7 +103,7 @@ in
 
         os = {
           disabled = false;
-          style = "bg:color_orange_a11y fg:color_fg0";
+          style = "bg:color_orange fg:color_fg0";
           symbols = {
             Windows = "󰍲";
             Ubuntu = "󰕈";
@@ -136,7 +131,7 @@ in
 
         # Project View
         directory = {
-          style = "fg:color_fg0 bg:color_yellow_a11y";
+          style = "fg:color_fg0 bg:color_yellow";
           format = "[ $path ]($style)[$read_only]($read_only_style)";
           truncation_length = 3;
           truncate_to_repo = true;
@@ -145,8 +140,8 @@ in
 
         username = {
           disabled = false;
-          style_user = "bg:color_orange_a11y fg:color_fg0";
-          style_root = "bg:color_orange_a11y fg:color_fg0";
+          style_user = "bg:color_orange fg:color_fg0";
+          style_root = "bg:color_orange fg:color_fg0";
           format = "[ $user ]($style)";
           show_always = true;
         };
@@ -156,17 +151,17 @@ in
           impure_msg = "";
           pure_msg = "λ";
           symbol = builtins.fromJSON ''"\uF313"'';
-          style = "fg:color_fg0 bg:color_yellow_a11y";
+          style = "fg:color_fg0 bg:color_yellow";
         };
 
         git_branch = {
           style = "bg:color_aqua";
-          format = "[[ $symbol$branch ](fg:color_bg1 bg:color_aqua)]($style)";
+          format = "[[ $symbol$branch ](fg:color_fg0 bg:color_aqua)]($style)";
         };
 
         git_status = {
           style = "bg:color_aqua";
-          format = "[[($all_status$ahead_behind )](fg:color_bg1 bg:color_aqua)]($style)";
+          format = "[[($all_status$ahead_behind )](fg:color_fg0 bg:color_aqua)]($style)";
         };
 
         # Cloud View
@@ -261,14 +256,14 @@ in
         fill.symbol = " ";
 
         profiles.claude = lib.replaceStrings [ "\n" ] [ "" ] ''
-          [${pl.lcap}](color_orange_a11y)
+          [${pl.lcap}](color_orange)
           ''${env_var.CLAUDE_DIR}
-          ([${pl.arrow}](fg:color_orange_a11y bg:color_aqua)$git_branch$git_status[${pl.arrow}](fg:color_aqua bg:color_blue_a11y))
+          ([${pl.arrow}](fg:color_orange bg:color_aqua)$git_branch$git_status[${pl.arrow}](fg:color_aqua bg:color_blue))
           ''${env_var.CLAUDE_NO_GIT}
           ''${env_var.CLAUDE_MODEL}
-          [${pl.rcap}](fg:color_blue_a11y)
+          [${pl.rcap}](fg:color_blue)
           $fill
-          ([${pl.lcap}](fg:color_purple_a11y)''${env_var.CLAUDE_USAGE})
+          ([${pl.lcap}](fg:color_purple)''${env_var.CLAUDE_USAGE})
           (''${env_var.CLAUDE_R_U2D})
           (''${env_var.CLAUDE_R_UEND})
           (''${env_var.CLAUDE_R_DOPEN})
@@ -278,15 +273,15 @@ in
         # env_var sub-modules (nested so TOML generates [env_var.X] sections)
         env_var = {
           # Content modules
-          CLAUDE_DIR.format = "[ $env_value ](fg:color_fg0 bg:color_orange_a11y)";
-          CLAUDE_MODEL.format = "[ $env_value ](fg:color_fg0 bg:color_blue_a11y)";
-          CLAUDE_USAGE.format = "[ $env_value ](fg:color_fg0 bg:color_purple_a11y)";
+          CLAUDE_DIR.format = "[ $env_value ](fg:color_fg0 bg:color_orange)";
+          CLAUDE_MODEL.format = "[ $env_value ](fg:color_fg0 bg:color_blue)";
+          CLAUDE_USAGE.format = "[ $env_value ](fg:color_fg0 bg:color_purple)";
           CLAUDE_CTX.format = "[ $env_value ](fg:color_fg0 bg:color_bg3)";
           # Left sentinel
-          CLAUDE_NO_GIT.format = "[${pl.arrow}](fg:color_orange_a11y bg:color_blue_a11y)";
+          CLAUDE_NO_GIT.format = "[${pl.arrow}](fg:color_orange bg:color_blue)";
           # Right side sentinels
-          CLAUDE_R_U2D.format = "[${pl.rarrow}](fg:color_bg3 bg:color_purple_a11y)";
-          CLAUDE_R_UEND.format = "[${pl.rcap}](fg:color_purple_a11y)";
+          CLAUDE_R_U2D.format = "[${pl.rarrow}](fg:color_bg3 bg:color_purple)";
+          CLAUDE_R_UEND.format = "[${pl.rcap}](fg:color_purple)";
           CLAUDE_R_DOPEN.format = "[${pl.lcap}](fg:color_bg3)";
         };
       }
