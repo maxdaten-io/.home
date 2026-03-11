@@ -65,6 +65,7 @@ in
     ./modules/ghostty.nix
     ./modules/zed.nix
     ./modules/zoxide.nix
+    ./modules/lazygit.nix
     ./modules/claude-code.nix
     ./modules/playwright-cli.nix
     ./modules/indie-consultant.nix
@@ -86,7 +87,6 @@ in
 
       peco
       git-ignore
-      lazygit
 
       # shell tools
       ripgrep
