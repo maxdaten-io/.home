@@ -96,7 +96,7 @@ in
       set -g status-position bottom
       # Gap between panes and status bar
       set -g pane-border-status bottom
-      set -g pane-border-format ""
+      set -g pane-border-format " #P: #{?pane_title,#T,#{pane_current_command}} "
       set -g base-index 1
       setw -g pane-base-index 1
       set -g renumber-windows on
