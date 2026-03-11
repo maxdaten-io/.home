@@ -93,6 +93,7 @@ in
       set -g focus-events on
       # Allow OSC 8 hyperlinks to pass through to Ghostty
       set -ag terminal-features ",*:hyperlinks"
+      set -g allow-passthrough on
       set -g status-position bottom
       # Gap between panes and status bar
       set -g pane-border-status bottom
@@ -120,6 +121,13 @@ in
     '';
     plugins = with pkgs; [
       tmuxPlugins.tmux-fzf
+      {
+        plugin = tmuxPlugins.fzf-tmux-url;
+        extraConfig = ''
+          set -g @fzf-url-fzf-options '-w 100% -h 50% --multi -0 --no-preview --scroll-off=0'
+          set -g @fzf-url-open "${pkgs.writeShellScript "copy-url" ''printf '%s' "$1" | pbcopy''}"
+        '';
+      }
       {
         plugin = catppuccinWithCave;
         extraConfig = ''
