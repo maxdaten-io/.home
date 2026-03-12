@@ -47,6 +47,57 @@ let
   '';
 
   # Patch catppuccin plugin to include the custom theme
+  # Side-effect script: scans all panes for Claude Code, sets per-window
+  # user options (@claude_w, @claude_a, @claude_i, @claude_any) so the
+  # catppuccin window_text format can read them.  Produces no stdout.
+  claudePaneMonitor = pkgs.writeShellScript "claude-pane-monitor" ''
+    session="$(tmux display-message -p '#{session_name}')"
+    declare -A working asking idle
+
+    while IFS=$'\t' read -r win title; do
+      case "$title" in
+        *"Claude Code"*)
+          case "$title" in
+            "✳ "*)  asking[$win]=$(( ''${asking[$win]:-0} + 1 )) ;;
+            "Claude Code") idle[$win]=$(( ''${idle[$win]:-0} + 1 )) ;;
+            *)      working[$win]=$(( ''${working[$win]:-0} + 1 )) ;;
+          esac ;;
+      esac
+    done < <(tmux list-panes -s -t "$session" -F '#{window_index}	#{pane_title}')
+
+    while read -r win; do
+      w=''${working[$win]:-0}; a=''${asking[$win]:-0}; i=''${idle[$win]:-0}
+      total=$((w + a + i))
+      tmux set-option -wqt "''${session}:''${win}" @claude_w "$w"
+      tmux set-option -wqt "''${session}:''${win}" @claude_a "$a"
+      tmux set-option -wqt "''${session}:''${win}" @claude_i "$i"
+      tmux set-option -wqt "''${session}:''${win}" @claude_any "$([ $total -gt 0 ] && echo 1 || echo 0)"
+    done < <(tmux list-windows -t "$session" -F '#{window_index}')
+  '';
+
+  # Build the window text format with per-window Claude state icons.
+  # Each state shows a colored icon + count (if >1).  Falls back to #W when
+  # no Claude panes are present (@claude_any != 1).
+  #
+  # tmux conditional: #{?#{m:1,#{@claude_any}}, <claude-icons> claude, #W}
+  # Per-state icon:   #{?#{m:0,#{@claude_X}},, <icon><count>}
+  #   — m:0 matches when count IS zero → empty; false branch shows the icon.
+  #   — count shown only when >1 via nested #{?#{m:1,#{@claude_X}},,#{@claude_X}}
+  claudeWindowText =
+    let
+      # icon + optional count for a single state
+      stateIcon =
+        optName: icon: color:
+        let
+          countIfMany = "#{?#{m:1,#{@${optName}}},,#{@${optName}}}";
+        in
+        "#{?#{m:0,#{@${optName}}},,#[fg=${color}]${icon}#[fg=${palette.color_fg0}]${countIfMany} }";
+      workingIcon = stateIcon "claude_w" "󱜚" palette.color_purple;
+      askingIcon = stateIcon "claude_a" "󰭻" palette.color_green;
+      idleIcon = stateIcon "claude_i" "󰏤" palette.color_bg3;
+    in
+    " #{?#{m:1,#{@claude_any}},${workingIcon}${askingIcon}${idleIcon}claude,#W} #{b:pane_current_path}";
+
   catppuccinWithCave = pkgs.tmuxPlugins.catppuccin.overrideAttrs (old: {
     postInstall = (old.postInstall or "") + ''
       cp ${atelierCaveTheme} $out/share/tmux-plugins/catppuccin/themes/catppuccin_atelier-cave_tmux.conf
@@ -115,7 +166,7 @@ in
       set -g status-left-length 100
       set -g status-right-length 100
       set -g status-left "#{E:@catppuccin_status_session}"
-      set -g status-right "#{E:@catppuccin_status_application}"
+      set -g status-right "#(${claudePaneMonitor})#{E:@catppuccin_status_application}"
       set -agF status-right "#{E:@catppuccin_status_cpu}"
       set -ag status-right "#{E:@catppuccin_status_date_time}"
 
@@ -135,9 +186,9 @@ in
         plugin = catppuccinWithCave;
         extraConfig = ''
           set -g @catppuccin_flavor "atelier-cave"
-          # Show Claude Code state icon in window pill when active, normal command otherwise
-          # ✳ in pane title = idle/asking → 󰭻 (green), other Claude Code title = working → 󱜚 (purple)
-          set -g @catppuccin_window_text " #{?#{m:*Claude Code*,#T},#{?#{m:✳*,#T},#[fg=${palette.color_green}]󰭻#[fg=${palette.color_fg0}] ,#[fg=${palette.color_purple}]󱜚#[fg=${palette.color_fg0}] }claude,#W} #{b:pane_current_path}"
+          # Window pill reads per-window @claude_* options set by claudePaneMonitor
+          # Shows aggregated state icons (working/asking/idle) across ALL panes
+          set -g @catppuccin_window_text "${claudeWindowText}"
           set -g @catppuccin_window_status_style "rounded"
           set -g @catppuccin_date_time_text " %d.%m. %H:%M"
 
