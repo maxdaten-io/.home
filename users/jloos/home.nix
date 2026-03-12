@@ -77,6 +77,7 @@ in
     with pkgs;
     [
       direnv
+      just
       nodejs
       python3
 
