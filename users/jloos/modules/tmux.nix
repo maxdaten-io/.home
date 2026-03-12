@@ -7,6 +7,33 @@
 let
   palette = import ./palette.nix;
 
+  # Script to detect Claude Code activity across all tmux panes in the current session.
+  # Reads pane_title to distinguish idle (✳) from working (spinner).
+  claude-tmux-indicator = pkgs.writeShellScript "claude-tmux-indicator" ''
+    working=0
+    asking=0
+
+    while IFS= read -r title; do
+      case "$title" in
+        *"Claude Code"*)
+          # ✳ = idle/asking for input; anything else with "Claude Code" = working
+          case "$title" in
+            "✳ Claude Code"*) asking=$((asking + 1)) ;;
+            *) working=$((working + 1)) ;;
+          esac
+          ;;
+      esac
+    done < <(tmux list-panes -s -F '#{pane_title}' 2>/dev/null)
+
+    if [ "$working" -gt 0 ] && [ "$asking" -gt 0 ]; then
+      printf '  %d   %d' "$working" "$asking"
+    elif [ "$working" -gt 0 ]; then
+      printf '  %d' "$working"
+    elif [ "$asking" -gt 0 ]; then
+      printf '  %d' "$asking"
+    fi
+  '';
+
   # Atelier Cave theme for catppuccin/tmux
   # Maps the base16 Atelier Cave palette to catppuccin's @thm_* variables.
   # Base tones interpolated from base00(#19171c)–base07(#efecf4).
@@ -108,11 +135,15 @@ in
       bind -T copy-mode WheelUpPane send-keys -X -N 1 scroll-up
       bind -T copy-mode WheelDownPane send-keys -X -N 1 scroll-down
 
+      # Faster status updates for Claude Code indicator responsiveness
+      set -g status-interval 5
+
       # Status bar (must be after catppuccin plugin loads)
       set -g status-left-length 100
       set -g status-right-length 100
       set -g status-left "#{E:@catppuccin_status_session}"
-      set -g status-right "#{E:@catppuccin_status_application}"
+      set -g status-right "#[fg=${palette.color_purple},bg=default]#(${claude-tmux-indicator})#[default]"
+      set -ag status-right "#{E:@catppuccin_status_application}"
       set -agF status-right "#{E:@catppuccin_status_cpu}"
       set -ag status-right "#{E:@catppuccin_status_date_time}"
 
