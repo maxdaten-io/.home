@@ -86,6 +86,8 @@ in
     ## Tools and CLIs
 
     When a tool is missing in environment, try to use `nix` like `nix shell nixpkgs#nodejs_latest -c npx --help` first.
+
+    Before editing config that references CLI tool options, always verify the correct syntax first by running `--help`, `man <tool>`, or reading docs. Never guess at flag values, separators, or option names.
   '';
 
   home.activation.extractClaudeCredentials = config.lib.dag.entryAfter [ "writeBoundary" ] ''
