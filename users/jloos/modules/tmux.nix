@@ -7,33 +7,6 @@
 let
   palette = import ./palette.nix;
 
-  # Script to detect Claude Code activity across all tmux panes in the current session.
-  # Reads pane_title to distinguish idle (✳) from working (spinner).
-  claude-tmux-indicator = pkgs.writeShellScript "claude-tmux-indicator" ''
-    working=0
-    asking=0
-
-    while IFS= read -r title; do
-      case "$title" in
-        *"Claude Code"*)
-          # ✳ = idle/asking for input; anything else with "Claude Code" = working
-          case "$title" in
-            "✳ Claude Code"*) asking=$((asking + 1)) ;;
-            *) working=$((working + 1)) ;;
-          esac
-          ;;
-      esac
-    done < <(tmux list-panes -s -F '#{pane_title}' 2>/dev/null)
-
-    if [ "$working" -gt 0 ] && [ "$asking" -gt 0 ]; then
-      printf '  %d   %d' "$working" "$asking"
-    elif [ "$working" -gt 0 ]; then
-      printf '  %d' "$working"
-    elif [ "$asking" -gt 0 ]; then
-      printf '  %d' "$asking"
-    fi
-  '';
-
   # Atelier Cave theme for catppuccin/tmux
   # Maps the base16 Atelier Cave palette to catppuccin's @thm_* variables.
   # Base tones interpolated from base00(#19171c)–base07(#efecf4).
@@ -142,8 +115,7 @@ in
       set -g status-left-length 100
       set -g status-right-length 100
       set -g status-left "#{E:@catppuccin_status_session}"
-      set -g status-right "#[fg=${palette.color_purple},bg=default]#(${claude-tmux-indicator})#[default]"
-      set -ag status-right "#{E:@catppuccin_status_application}"
+      set -g status-right "#{E:@catppuccin_status_application}"
       set -agF status-right "#{E:@catppuccin_status_cpu}"
       set -ag status-right "#{E:@catppuccin_status_date_time}"
 
@@ -163,7 +135,9 @@ in
         plugin = catppuccinWithCave;
         extraConfig = ''
           set -g @catppuccin_flavor "atelier-cave"
-          set -g @catppuccin_window_text " #W #{b:pane_current_path}"
+          # Show Claude Code state icon in window pill when active, normal command otherwise
+          # ✳ in pane title = idle/asking → 󰭻 (green), other Claude Code title = working → 󱜚 (purple)
+          set -g @catppuccin_window_text " #{?#{m:*Claude Code*,#T},#{?#{m:✳*,#T},#[fg=${palette.color_green}]󰭻#[fg=${palette.color_fg0}] ,#[fg=${palette.color_purple}]󱜚#[fg=${palette.color_fg0}] }claude,#W} #{b:pane_current_path}"
           set -g @catppuccin_window_status_style "rounded"
           set -g @catppuccin_date_time_text " %d.%m. %H:%M"
 
