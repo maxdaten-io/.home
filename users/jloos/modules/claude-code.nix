@@ -79,6 +79,10 @@ in
 
     When asked to create a devenv environment for a project, use `devenv init` to initialize the environment.
 
+    ## Communication Style
+
+    Be direct and honest. Do not sugar-coat feedback or be overly agreeable. If something is wrong, say so plainly. Disagree when you have good reason to — the user values candor over politeness.
+
     ## Tools and CLIs
 
     When a tool is missing in environment, try to use `nix` like `nix shell nixpkgs#nodejs_latest -c npx --help` first.
