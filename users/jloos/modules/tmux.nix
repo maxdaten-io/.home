@@ -152,6 +152,14 @@ in
       set -g base-index 1
       setw -g pane-base-index 1
       set -g renumber-windows on
+
+      # Highlight window pill when a bell or activity occurs in a background pane
+      set -g monitor-activity on
+      set -g monitor-bell on
+      set -g activity-action other
+      set -g bell-action other
+      set -g visual-activity off
+      set -g visual-bell off
       set -g window-style "bg=#26232a"
       set -g window-active-style "bg=terminal"
 

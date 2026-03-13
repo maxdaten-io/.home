@@ -70,6 +70,7 @@ in
       ${if trace then "set -U fish_trace 2" else "set -e fish_trace"}
       set -U fish_greeting
       set __done_enabled
+      set -g __done_notify_sound 1
     '';
 
     functions.fish_reload = "source ~/.config/fish/config.fish";
