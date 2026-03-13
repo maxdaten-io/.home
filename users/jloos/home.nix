@@ -94,6 +94,7 @@ in
       bats
       watch
       tree
+      pstree
       wget
       pwgen
       fastfetch
