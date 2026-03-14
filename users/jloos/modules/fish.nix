@@ -64,7 +64,7 @@ in
       zed = "zeditor";
       agy = "/Applications/Antigravity.app/Contents/MacOS/Electron";
       dev = "devenv shell -- $SHELL";
-      cyolo = "claude --allow-dangerously-skip-permissions";
+      claude-yolo = "claude --allow-dangerously-skip-permissions";
     };
 
     shellInit = ''
