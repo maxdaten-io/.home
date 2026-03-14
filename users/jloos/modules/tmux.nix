@@ -157,6 +157,11 @@ in
       set -g window-style "bg=#26232a"
       set -g window-active-style "bg=terminal"
 
+      # New panes/windows inherit the current pane's working directory
+      bind '"' split-window -v -c "#{pane_current_path}"
+      bind % split-window -h -c "#{pane_current_path}"
+      bind c new-window -c "$HOME/Developer"
+
       # Match Ghostty scroll speed (1 line per tick)
       bind -T copy-mode WheelUpPane send-keys -X -N 1 scroll-up
       bind -T copy-mode WheelDownPane send-keys -X -N 1 scroll-down
