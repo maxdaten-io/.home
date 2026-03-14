@@ -79,6 +79,16 @@ in
 
     When asked to create a devenv environment for a project, use `devenv init` to initialize the environment.
 
+    ## Engineering Process (Dave Farley)
+
+    Apply Dave Farley's principles from *Modern Software Engineering* and *Continuous Delivery*:
+
+    - **Work in small steps with fast feedback** — every change should be small, incremental, and independently deployable
+    - **Optimize for learning** — treat development as an exercise in discovery; use empirical feedback (tests, plans, deploys) over speculation
+    - **Continuous Delivery mindset** — the code on `main` must always be in a releasable state; never break the trunk
+    - **Separate deployability from feature release** — deploy continuously, release features when ready
+    - **Manage complexity through separation of concerns** — high cohesion, loose coupling, clear boundaries
+
     ## Communication Style
 
     Be direct and honest. Do not sugar-coat feedback or be overly agreeable. If something is wrong, say so plainly. Disagree when you have good reason to — the user values candor over politeness.
