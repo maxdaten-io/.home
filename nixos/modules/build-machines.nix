@@ -1,32 +1,18 @@
-{ ... }:
+{ config, lib, ... }:
+let
+  cfg = config.nix-rosetta-builder;
+in
 {
+  nix-rosetta-builder = {
+    enable = true;
+    onDemand = true;
+  };
 
-  nix.buildMachines = [
-    # {
-    #   hostName = "hydra.m.briends.cloud";
-    #   system = "x86_64-linux";
-    #   sshUser = "jloos";
-    #   sshKey = "/Users/jloos/.ssh/id_rsa";
-    #   publicHostKey =
-    #     let
-    #       hostkey = ./hydra.m.briends.cloud.pub;
-    #       encoded = pkgs.runCommandLocal "base64_encoded_hostkey" { } ''
-    #         ${pkgs.libb64}/bin/base64 -e ${hostkey} $out;
-    #       '';
-    #     in
-    #     "${builtins.readFile encoded}";
-    #   maxJobs = 4;
-    #   speedFactor = 2;
-    #   supportedFeatures = [
-    #     "nixos-test"
-    #     "benchmark"
-    #     "big-parallel"
-    #     "kvm"
-    #   ];
-    # }
-  ];
-  nix.distributedBuilds = true;
-  nix.extraOptions = ''
-    builders-use-substitutes = true
-  '';
+  # Write /etc/nix/machines directly — nix.buildMachines is inert with nix.enable = false.
+  # Determinate Nix's nix.conf already has: builders = @/etc/nix/machines
+  environment.etc."nix/machines" = lib.mkIf cfg.enable {
+    text = ''
+      ${cfg.sshProtocol}://rosetta-builder aarch64-linux,x86_64-linux - ${toString cfg.cores} ${toString cfg.speedFactor} benchmark,big-parallel,nixos-test - -
+    '';
+  };
 }

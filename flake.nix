@@ -58,6 +58,11 @@
     treefmt-nix.url = "github:numtide/treefmt-nix";
 
     mk-shell-bin.url = "github:rrbutani/nix-mk-shell-bin";
+
+    nix-rosetta-builder = {
+      url = "github:cpick/nix-rosetta-builder";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   nixConfig = {

@@ -20,6 +20,7 @@ in
         inputs.nix-homebrew.darwinModules.nix-homebrew
         inputs.home-manager.darwinModules.home-manager
         inputs.sops-nix.darwinModules.sops
+        inputs.nix-rosetta-builder.darwinModules.default
         {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
