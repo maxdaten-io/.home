@@ -826,7 +826,7 @@
     "nix-rosetta-builder": {
       "inputs": {
         "nixpkgs": [
-          "nixpkgs"
+          "nixpkgs-rosetta-builder"
         ]
       },
       "locked": {
@@ -930,6 +930,22 @@
       "original": {
         "owner": "nix-community",
         "repo": "nixpkgs.lib",
+        "type": "github"
+      }
+    },
+    "nixpkgs-rosetta-builder": {
+      "locked": {
+        "lastModified": 1773389992,
+        "narHash": "sha256-wvfdLLWJ2I9oEpDd9PfMA8osfIZicoQ5MT1jIwNs9Tk=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "c06b4ae3d6599a672a6210b7021d699c351eebda",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "c06b4ae3d6599a672a6210b7021d699c351eebda",
         "type": "github"
       }
     },
@@ -1168,6 +1184,7 @@
         "nix-index-database": "nix-index-database",
         "nix-rosetta-builder": "nix-rosetta-builder",
         "nixpkgs": "nixpkgs_5",
+        "nixpkgs-rosetta-builder": "nixpkgs-rosetta-builder",
         "nnf": "nnf",
         "raspberry-pi-nix": "raspberry-pi-nix",
         "sops-nix": "sops-nix",

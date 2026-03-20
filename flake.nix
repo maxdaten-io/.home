@@ -59,9 +59,14 @@
 
     mk-shell-bin.url = "github:rrbutani/nix-mk-shell-bin";
 
+    # Pinned nixpkgs for rosetta builder VM image stability — update deliberately,
+    # not on every `just update`. Needs a nixpkgs with services.logind.settings
+    # (missing in upstream's pinned d89fc19).
+    nixpkgs-rosetta-builder.url = "github:NixOS/nixpkgs/c06b4ae3d6599a672a6210b7021d699c351eebda";
+
     nix-rosetta-builder = {
       url = "github:cpick/nix-rosetta-builder";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixpkgs.follows = "nixpkgs-rosetta-builder";
     };
   };
 
