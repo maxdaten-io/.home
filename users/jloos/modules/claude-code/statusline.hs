@@ -5,9 +5,6 @@
 module Main where
 
 import Control.Exception (SomeException, catch)
-import Control.Monad (guard, void)
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Maybe (MaybeT (..), runMaybeT)
 import Data.Aeson (FromJSON, decode)
 import Data.ByteString.Lazy qualified as BL
 import Data.Maybe (catMaybes, fromMaybe, isJust)
@@ -17,8 +14,7 @@ import Data.Time.LocalTime (ZonedTime, zonedTimeToUTC)
 import GHC.Generics (Generic)
 import Numeric (showFFloat)
 import System.Console.Terminal.Size (hSize, width)
-import System.Directory (doesFileExist, getHomeDirectory, getModificationTime)
-import System.Environment (getArgs, getEnvironment, lookupEnv)
+import System.Environment (getEnvironment, lookupEnv)
 import System.Exit (ExitCode (..))
 import System.FilePath (takeFileName)
 import System.IO (IOMode (ReadMode), hClose, openFile)
@@ -31,6 +27,7 @@ data StatusInput = StatusInput
     { model :: Maybe ModelInfo
     , workspace :: Maybe WorkspaceInfo
     , context_window :: Maybe ContextWindow
+    , rate_limits :: Maybe RateLimits
     }
     deriving (Generic)
 instance FromJSON StatusInput
@@ -50,30 +47,22 @@ data ContextWindow = ContextWindow
     deriving (Generic)
 instance FromJSON ContextWindow
 
--- Credentials file (~/.claude/.credentials.json)
-newtype CredFile = CredFile {claudeAiOauth :: Maybe OAuthCred} deriving (Generic)
-instance FromJSON CredFile
+data RateLimits = RateLimits
+    { five_hour :: Maybe UsageWindow
+    , seven_day :: Maybe UsageWindow
+    }
+    deriving (Generic)
+instance FromJSON RateLimits
 
-newtype OAuthCred = OAuthCred {accessToken :: Maybe String} deriving (Generic)
-instance FromJSON OAuthCred
-
--- Usage cache (CLAUDE_USAGE_CACHE)
 data UsageWindow = UsageWindow
-    { utilization :: Maybe Double
+    { used_percentage :: Maybe Double
     , resets_at :: Maybe String
     }
     deriving (Generic)
 instance FromJSON UsageWindow
 
-data UsageCache = UsageCache
-    { five_hour :: Maybe UsageWindow
-    , seven_day :: Maybe UsageWindow
-    }
-    deriving (Generic)
-instance FromJSON UsageCache
-
 emptyInput :: StatusInput
-emptyInput = StatusInput Nothing Nothing Nothing
+emptyInput = StatusInput Nothing Nothing Nothing Nothing
 
 ----------------------- Formatting --------------------------
 
@@ -97,10 +86,7 @@ formatCountdown dt
     days = secs `div` 86400
     rHrs = (secs `mod` 86400) `div` 3600
 
------------------------ Usage cache -------------------------
-
-getUsageCachePath :: IO FilePath
-getUsageCachePath = fromMaybe "/tmp/.claude_usage_cache" <$> lookupEnv "CLAUDE_USAGE_CACHE"
+----------------------- Usage info --------------------------
 
 data UsageInfo = UsageInfo
     { fiveHourUtil :: Maybe Double
@@ -115,70 +101,14 @@ emptyUsage = UsageInfo Nothing Nothing Nothing Nothing
 parseISO :: String -> Maybe UTCTime
 parseISO s = zonedTimeToUTC <$> (iso8601ParseM s :: Maybe ZonedTime)
 
-toUsageInfo :: UsageCache -> UsageInfo
-toUsageInfo (UsageCache mFive mSeven) =
+toUsageInfo :: RateLimits -> UsageInfo
+toUsageInfo (RateLimits mFive mSeven) =
     UsageInfo
-        { fiveHourUtil = utilization =<< mFive
+        { fiveHourUtil = used_percentage =<< mFive
         , fiveHourReset = parseISO =<< resets_at =<< mFive
-        , sevenDayUtil = utilization =<< mSeven
+        , sevenDayUtil = used_percentage =<< mSeven
         , sevenDayReset = parseISO =<< resets_at =<< mSeven
         }
-
-readUsageCache :: FilePath -> IO UsageInfo
-readUsageCache cachePath = catch readIt (\e -> let _ = e :: SomeException in pure emptyUsage)
-  where
-    readIt = do
-        exists <- doesFileExist cachePath
-        if not exists
-            then pure emptyUsage
-            else do
-                bytes <- BL.readFile cachePath
-                pure $ maybe emptyUsage toUsageInfo (decode bytes)
-
----------------------- Fetch mode ---------------------------
-
-isCacheFresh :: FilePath -> UTCTime -> IO Bool
-isCacheFresh cachePath now = do
-    exists <- doesFileExist cachePath
-    if not exists
-        then pure False
-        else do
-            mtime <- getModificationTime cachePath
-            pure (diffUTCTime now mtime < 30)
-
-runFetch :: IO ()
-runFetch = void $ runMaybeT $ do
-    cachePath <- lift getUsageCachePath
-    now <- lift getCurrentTime
-    fresh <- lift $ isCacheFresh cachePath now
-    guard (not fresh)
-    home <- lift getHomeDirectory
-    let credPath = home ++ "/.claude/.credentials.json"
-    credExists <- lift $ doesFileExist credPath
-    guard credExists
-    credBytes <- lift $ BL.readFile credPath
-    cred <- MaybeT . pure $ (decode credBytes :: Maybe CredFile)
-    oauth <- MaybeT . pure $ claudeAiOauth cred
-    token <- MaybeT . pure $ accessToken oauth
-    guard (not (null token))
-    (exit, out, _) <-
-        lift $
-            readCreateProcessWithExitCode
-                ( proc
-                    "curl"
-                    [ "-sf"
-                    , "--max-time"
-                    , "10"
-                    , "-H"
-                    , "Authorization: Bearer " ++ token
-                    , "-H"
-                    , "anthropic-beta: oauth-2025-04-20"
-                    , "https://api.anthropic.com/oauth/usage"
-                    ]
-                )
-                ""
-    guard (exit == ExitSuccess)
-    lift $ writeFile cachePath out
 
 ------------------- Nerd font icons -------------------------
 
@@ -219,8 +149,8 @@ isGitRepo cwd = do
             ""
     pure (exit == ExitSuccess)
 
-runStatusline :: IO ()
-runStatusline = do
+main :: IO ()
+main = do
     input <- BL.getContents
     let si = fromMaybe emptyInput (decode input)
 
@@ -235,10 +165,9 @@ runStatusline = do
     -- Git: just a boolean check — Starship handles branch/status rendering
     hasGit <- if null cwd then pure False else isGitRepo cwd
 
-    -- Usage info
-    cachePath <- getUsageCachePath
+    -- Usage info from native rate_limits (Nothing pre-2.1.80 = no usage shown)
     now <- getCurrentTime
-    usage <- readUsageCache cachePath
+    let usage = maybe emptyUsage toUsageInfo (rate_limits si)
 
     -- Nix shell detection
     dirIcon <- maybe iconFolder (const iconNix) <$> lookupEnv "IN_NIX_SHELL"
@@ -309,12 +238,3 @@ runStatusline = do
             (proc starshipBin starshipArgs){env = Just fullEnv}
             ""
     putStr out
-
---------------------------- Main ----------------------------
-
-main :: IO ()
-main = do
-    args <- getArgs
-    case args of
-        ["--fetch"] -> catch runFetch (\e -> let _ = e :: SomeException in pure ())
-        _ -> runStatusline

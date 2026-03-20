@@ -75,19 +75,29 @@ let
       ${bin} | sed 's/\x1b\[[0-9;]*m//g'
   '';
 
-  # Use far-future reset times so countdown is always positive
-  usageCacheJson = builtins.toJSON {
-    five_hour = {
-      utilization = 22.7;
-      resets_at = "2099-01-01T12:00:00+00:00";
+  fullJson = builtins.toJSON {
+    model.display_name = "Opus 4.6";
+    workspace.current_dir = "/tmp";
+    context_window = {
+      remaining_percentage = 72.5;
+      total_input_tokens = 8000;
+      total_output_tokens = 2000;
+      context_window_size = 200000;
     };
-    seven_day = {
-      utilization = 5.1;
-      resets_at = "2099-01-07T00:00:00+00:00";
+    rate_limits = {
+      five_hour = {
+        used_percentage = 22.7;
+        resets_at = "2099-01-01T12:00:00+00:00";
+      };
+      seven_day = {
+        used_percentage = 5.1;
+        resets_at = "2099-01-07T00:00:00+00:00";
+      };
     };
+    output_style.name = "default";
   };
 
-  fullJson = builtins.toJSON {
+  noRateLimitsJson = builtins.toJSON {
     model.display_name = "Opus 4.6";
     workspace.current_dir = "/tmp";
     context_window = {
@@ -115,45 +125,23 @@ let
       bats_load_library bats-support
       bats_load_library bats-assert
       export HOME=$(mktemp -d)
-      export CLAUDE_USAGE_CACHE="$HOME/.claude_usage_cache"
       export STARSHIP_CONFIG="${testStarshipConfig}"
       export STARSHIP_BIN="${starshipBin}"
-      rm -f "$CLAUDE_USAGE_CACHE"
     }
 
-    teardown() {
-      rm -f "$CLAUDE_USAGE_CACHE"
-    }
-
-    @test "fetch: no credentials exits cleanly, no cache created" {
-      run ${bin} --fetch
-      assert_success
-      [ ! -f "$CLAUDE_USAGE_CACHE" ]
-    }
-
-    @test "fetch: fresh cache skips fetch (TTL)" {
-      echo '{}' > "$CLAUDE_USAGE_CACHE"
-      local before
-      before=$(stat -c %Y "$CLAUDE_USAGE_CACHE" 2>/dev/null || stat -f %m "$CLAUDE_USAGE_CACHE")
-      run ${bin} --fetch
-      assert_success
-      local after
-      after=$(stat -c %Y "$CLAUDE_USAGE_CACHE" 2>/dev/null || stat -f %m "$CLAUDE_USAGE_CACHE")
-      [ "$before" = "$after" ]
-    }
-
-    @test "render: full with usage cache shows 5h/7d/ctx" {
-      echo '${usageCacheJson}' > "$CLAUDE_USAGE_CACHE"
+    @test "render: full with rate_limits shows usage and ctx" {
       run ${render} '${fullJson}'
       assert_success
-      assert_output --partial "5h 23%"
-      assert_output --partial "7d 5%"
+      # Both rate limit windows rendered (pct from input + countdown)
+      assert_output --regexp "23% [0-9]+d"
+      assert_output --regexp "5% [0-9]+d"
+      # Context window
       assert_output --partial "ctx 28%"
       assert_output --partial "10K/200K"
     }
 
-    @test "render: no cache degrades gracefully" {
-      run ${render} '${fullJson}'
+    @test "render: no rate_limits degrades gracefully" {
+      run ${render} '${noRateLimitsJson}'
       assert_success
       assert_output --partial "ctx 28%"
       refute_output --partial "5h"
