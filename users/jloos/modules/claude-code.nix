@@ -109,14 +109,14 @@ in
     notebooklm
     (pkgs.buildNpmPackage rec {
       pname = "claude-code";
-      version = "2.1.77";
+      version = "2.1.80";
 
       src = pkgs.fetchurl {
         url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz";
-        hash = "sha256-96SUpvA+gQ8Tkm1tMCc7H3hqSw2EaRthE8w/AuYPFLA=";
+        hash = "sha256-AoufUosfpysMmHa+/O8pBanTt8cLlsUlw6eO0vXQLFA=";
       };
 
-      npmDepsHash = "sha256-zGktLSJJvo2k23TjJvQXvfAA48VYpnX0dWCsWa5R5Ek=";
+      npmDepsHash = "sha256-1z286B5Lu/NEHR8L0UGshWi8nz89LDo6mVHcMr4Z8Po=";
 
       # Get with `npm install @anthropic-ai/claude-code --package-lock-only`
       postPatch = ''
