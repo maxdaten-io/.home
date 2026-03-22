@@ -9,8 +9,7 @@ import Data.Aeson (FromJSON, decode)
 import Data.ByteString.Lazy qualified as BL
 import Data.Maybe (catMaybes, fromMaybe, isJust)
 import Data.Time.Clock (NominalDiffTime, UTCTime, diffUTCTime, getCurrentTime)
-import Data.Time.Format.ISO8601 (iso8601ParseM)
-import Data.Time.LocalTime (ZonedTime, zonedTimeToUTC)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import GHC.Generics (Generic)
 import Numeric (showFFloat)
 import System.Console.Terminal.Size (hSize, width)
@@ -56,7 +55,7 @@ instance FromJSON RateLimits
 
 data UsageWindow = UsageWindow
     { used_percentage :: Maybe Double
-    , resets_at :: Maybe String
+    , resets_at :: Maybe Double -- Unix epoch seconds
     }
     deriving (Generic)
 instance FromJSON UsageWindow
@@ -98,16 +97,16 @@ data UsageInfo = UsageInfo
 emptyUsage :: UsageInfo
 emptyUsage = UsageInfo Nothing Nothing Nothing Nothing
 
-parseISO :: String -> Maybe UTCTime
-parseISO s = zonedTimeToUTC <$> (iso8601ParseM s :: Maybe ZonedTime)
+epochToUTC :: Double -> UTCTime
+epochToUTC = posixSecondsToUTCTime . realToFrac
 
 toUsageInfo :: RateLimits -> UsageInfo
 toUsageInfo (RateLimits mFive mSeven) =
     UsageInfo
         { fiveHourUtil = used_percentage =<< mFive
-        , fiveHourReset = parseISO =<< resets_at =<< mFive
+        , fiveHourReset = epochToUTC <$> (resets_at =<< mFive)
         , sevenDayUtil = used_percentage =<< mSeven
-        , sevenDayReset = parseISO =<< resets_at =<< mSeven
+        , sevenDayReset = epochToUTC <$> (resets_at =<< mSeven)
         }
 
 ------------------- Nerd font icons -------------------------

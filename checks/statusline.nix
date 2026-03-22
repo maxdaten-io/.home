@@ -87,11 +87,11 @@ let
     rate_limits = {
       five_hour = {
         used_percentage = 22.7;
-        resets_at = "2099-01-01T12:00:00+00:00";
+        resets_at = 4070952000; # 2099-01-01T12:00:00Z (Unix epoch seconds)
       };
       seven_day = {
         used_percentage = 5.1;
-        resets_at = "2099-01-07T00:00:00+00:00";
+        resets_at = 4071427200; # 2099-01-07T00:00:00Z (Unix epoch seconds)
       };
     };
     output_style.name = "default";
