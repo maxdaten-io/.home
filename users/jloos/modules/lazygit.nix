@@ -10,7 +10,7 @@
           context = "files";
           loadingText = "Generating commit message...";
           output = "terminal";
-          command = ''git diff --cached | claude -p "Generate a concise git commit message for this diff. Output ONLY the commit message, nothing else. Use conventional commit format." | git commit -F -'';
+          command = ''git diff --cached | claude --model haiku -p "Generate a concise git commit message for this diff. Output ONLY the commit message, nothing else. Use conventional commit format." | git commit -F -'';
         }
       ];
     };
