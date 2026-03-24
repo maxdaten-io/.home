@@ -1,0 +1,48 @@
+# Maxdaten Platform configuration
+# Docs: https://github.com/maxdaten-io/gitops/blob/main/docs/design/0019-github-app-self-service-onboarding.md
+#
+# This file declares how your repository is provisioned on the Maxdaten
+# platform.  Edit the values below, then merge to trigger provisioning.
+apiVersion: platform.maxdaten.io/v1
+kind: PlatformApp
+
+# REQUIRED -- Add at least one Google account email.
+# These users receive GCP Editor access and K8s namespace admin.
+# The PR cannot be merged until at least one owner is listed.
+# Example:
+#   owners:
+#     - developer@example.com
+owners: []
+
+# Monthly budget limit in USD (min: $1, max: $20).
+# A billing alert fires at 80% of this value.  The GCP project is
+# suspended if the budget is exceeded.  Default: $3.
+# budget: 3
+
+# Path inside the repo where Kubernetes manifests are stored.
+# Flux will reconcile everything under this directory.
+# Must not contain ".." (path traversal is rejected).  Default: "k8s/".
+# manifestPath: k8s/
+
+# Additional GCP APIs to enable in the provisioned project.
+# Only the following APIs are allowed:
+#   - sqladmin.googleapis.com    (Cloud SQL)
+#   - aiplatform.googleapis.com  (Vertex AI)
+#   - gmail.googleapis.com       (Gmail sending)
+# Default: [] (no extra APIs).
+# apis: []
+
+# Whether to provision a namespace-scoped SecretStore backed by
+# GCP Secret Manager.  Enable this if your app needs runtime secrets
+# that are not checked into Git.  Default: false.
+# secrets: false
+
+# What happens when this file is removed from the repo.
+# PREVENT (default) blocks deletion -- you must explicitly set DELETE
+# to tear down the GCP project and K8s namespace.
+# deletionPolicy: PREVENT
+
+# Whether Flux image-automation controllers are enabled for this
+# namespace.  When true, Flux can auto-update container image tags
+# in your manifests.  Default: false.
+# imageAutomation: false
