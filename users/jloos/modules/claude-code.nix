@@ -100,6 +100,10 @@ in
     When a tool is missing in environment, try to use `nix` like `nix shell nixpkgs#nodejs_latest -c npx --help` first.
 
     Before editing config that references CLI tool options, always verify the correct syntax first by running `--help`, `man <tool>`, or reading docs. Never guess at flag values, separators, or option names.
+
+    ## Developer Profile
+
+    Read `~/.claude/get-shit-done/USER-PROFILE.md` for behavioral preferences and directives on how to interact with this developer. Apply the directives based on their confidence level.
   '';
 
   home.file.".claude/statusline-command" = {
@@ -111,14 +115,14 @@ in
     notebooklm
     (pkgs.buildNpmPackage rec {
       pname = "claude-code";
-      version = "2.1.83";
+      version = "2.1.85";
 
       src = pkgs.fetchurl {
         url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz";
-        hash = "sha256-Wo2YEWQeHdxAb7+tPD326V8PD0CB8jE31KCpRK0uBWE=";
+        hash = "sha256-kCNzGoLCu/TwSTs3CYx1aes+6WRbVGTpLsHEyGTVGDc=";
       };
 
-      npmDepsHash = "sha256-aGZx7/SFIprDPQpwGcaquP2PFfVGrc2+vbwlHdltXuA=";
+      npmDepsHash = "sha256-Kh86ssTUhO+PhTsN3FZAFo/WseoUpSkVCatU30CiRaM=";
 
       # Get with `npm install @anthropic-ai/claude-code --package-lock-only`
       postPatch = ''
