@@ -12,6 +12,14 @@
           output = "terminal";
           command = ''git diff --cached | claude --model haiku -p "Generate a concise git commit message for this diff. Output ONLY the commit message, nothing else. Use conventional commit format." | git commit -F -'';
         }
+        {
+          key = "P";
+          description = "Push up to selected commit";
+          context = "commits";
+          loadingText = "Pushing commit...";
+          stream = true;
+          command = "git push {{.SelectedRemote.Name}} {{.SelectedLocalCommit.Sha}}:{{.SelectedLocalBranch.Name}}";
+        }
       ];
     };
   };
