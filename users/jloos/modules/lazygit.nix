@@ -17,7 +17,7 @@
           description = "Push up to selected commit";
           context = "commits";
           loadingText = "Pushing commit...";
-          stream = true;
+          output = "log";
           command = "git push {{.SelectedRemote.Name}} {{.SelectedLocalCommit.Sha}}:{{.SelectedLocalBranch.Name}}";
         }
       ];
