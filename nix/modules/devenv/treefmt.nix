@@ -16,6 +16,7 @@ let
     # JSON formatting
     programs.prettier = {
       enable = true;
+      package = pkgs.prettier;
       includes = [ "*.json" ];
       excludes = [
         ".vscode/*.json"
