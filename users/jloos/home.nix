@@ -68,6 +68,7 @@ in
     ./modules/lazygit.nix
     ./modules/claude-code.nix
     ./modules/playwright-cli.nix
+    ./modules/apfel.nix
     ./modules/indie-consultant.nix
   ];
 
