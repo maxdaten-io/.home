@@ -32,6 +32,7 @@ let
 
     # Applications
     lens
+    obsidian
   ];
 
 in
