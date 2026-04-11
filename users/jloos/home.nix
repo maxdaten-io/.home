@@ -36,7 +36,7 @@ let
 
 in
 {
-  home.stateVersion = "25.11";
+  home.stateVersion = "26.05";
   # Home Manager needs a bit of information about you and the
   # paths it should manage.
   home.username = "jloos";
@@ -152,7 +152,11 @@ in
   programs.home-manager.enable = true;
 
   # Configurations
-  programs.man.generateCaches = true; # Allow man completions
+  programs.man = {
+    enable = true;
+    package = pkgs.man-db;
+    generateCaches = true; # Allow man completions
+  };
 
   programs.btop.enable = true;
   # https://github.com/aristocratos/btop#configurability

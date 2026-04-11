@@ -31,7 +31,7 @@
     nixfmt
     nixd
     # devenv
-    inputs.devenv.packages.${pkgs.system}.devenv
+    inputs.devenv.packages.${pkgs.stdenv.hostPlatform.system}.devenv
     direnv
   ];
 
