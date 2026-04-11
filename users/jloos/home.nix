@@ -8,7 +8,7 @@
 }:
 let
   pkgsWithOverlay = import inputs.nixpkgs {
-    inherit (pkgs) system;
+    inherit (pkgs.stdenv.hostPlatform) system;
     config.allowUnfree = true;
   };
 
