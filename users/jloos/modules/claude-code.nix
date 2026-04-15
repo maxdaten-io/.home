@@ -101,6 +101,8 @@ in
 
     Before editing config that references CLI tool options, always verify the correct syntax first by running `--help`, `man <tool>`, or reading docs. Never guess at flag values, separators, or option names.
 
+    For GitHub interactions (issues, PRs, releases, repo metadata, API calls), prefer the `gh` CLI when available over raw `git`, web URLs, or scraping. Use `gh api` for anything not covered by a dedicated subcommand.
+
     ## Developer Profile
 
     Read `~/.claude/get-shit-done/USER-PROFILE.md` for behavioral preferences and directives on how to interact with this developer. Apply the directives based on their confidence level.
