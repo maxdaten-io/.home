@@ -75,5 +75,15 @@ in
 
     functions.fish_reload = "source ~/.config/fish/config.fish";
 
+    functions.gwt = ''
+      set selected (git worktree list | fzf --height=40% --reverse --border \
+          --preview 'echo {}' \
+          | awk '{print $1}')
+
+      if test -n "$selected"
+          cd $selected
+      end
+    '';
+
   };
 }
