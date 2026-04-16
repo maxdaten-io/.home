@@ -76,8 +76,17 @@ in
     functions.fish_reload = "source ~/.config/fish/config.fish";
 
     functions.gwt = ''
-      set selected (git worktree list | fzf --height=40% --reverse --border \
-          --preview 'echo {}' \
+      set -l root (git rev-parse --show-toplevel)
+      or return 1
+
+      set -l selected (git worktree list | awk -v root="$root/" '{
+        path = $1
+        sub(root, "", path)
+        if (path == "") path = "."
+        printf "%s\t%s %s\n", $1, path, $3
+      }' | fzf --height=40% --reverse --border \
+          --with-nth=2.. \
+          --preview 'p={1}; echo "local:  $(git -C "$p" rev-parse --abbrev-ref HEAD 2>/dev/null)"; u=$(git -C "$p" rev-parse --abbrev-ref --symbolic-full-name "@{upstream}" 2>/dev/null) && echo "remote: $u" || echo "remote: none"; echo ""; git -C "$p" log --oneline -5 2>/dev/null' \
           | awk '{print $1}')
 
       if test -n "$selected"
