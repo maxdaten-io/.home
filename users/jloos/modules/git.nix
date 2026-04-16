@@ -57,7 +57,7 @@
       };
 
       pull = {
-        rebase = false;
+        rebase = true;
       };
 
       push = {
