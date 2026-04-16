@@ -3,14 +3,14 @@
   home.packages = [
     (pkgs.buildNpmPackage rec {
       pname = "playwright-cli";
-      version = "0.1.6";
+      version = "0.1.8";
 
       src = pkgs.fetchurl {
         url = "https://registry.npmjs.org/@playwright/cli/-/cli-${version}.tgz";
-        hash = "sha256-QG0rxAODZgoi32jNpmBltt6BqTXAT6FdfrnzSh2v5sc=";
+        hash = "sha256-7UJSZ3Kwzn93e4b2wAcB/j9a5VupgOUR4f0us31PfaQ=";
       };
 
-      npmDepsHash = "sha256-SxPSa5MtbEPVwnjAp9I5un0ye4UXvJxO8so6RwsYI2w=";
+      npmDepsHash = "sha256-LYhvEogLEXHHjvvQ3HQOe80DfSTf042fNKs4oKs4Bvg=";
 
       # Get with `npm install @playwright/cli --package-lock-only`
       postPatch = ''
