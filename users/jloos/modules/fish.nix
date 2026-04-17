@@ -75,25 +75,31 @@ in
 
     functions.fish_reload = "source ~/.config/fish/config.fish";
 
-    functions.gwt = ''
-      set -l root (git rev-parse --show-toplevel)
-      or return 1
+    functions.__gwt_preview = ''
+      set -l p $argv[1]
+      set -l home_rel (string replace -r "^$HOME" "~" $p)
+      set -l branch (git -C $p rev-parse --abbrev-ref HEAD 2>/dev/null)
+      set -l upstream (git -C $p rev-parse --abbrev-ref --symbolic-full-name "@{upstream}" 2>/dev/null)
+      echo "path:   $home_rel"
+      echo "local:  $branch"
+      if test -n "$upstream"
+          echo "remote: $upstream"
+      else
+          echo "remote: none"
+      end
+      echo ""
+      git -C $p log --oneline -10 --decorate 2>/dev/null
+    '';
 
-      set -l selected (git worktree list | awk -v root="$root" -v home="$HOME" '{
+    functions.gwt = ''
+      set -l selected (git worktree list | awk '{
         path = $1
-        if (path == root) {
-          rel = "."
-        } else if (index(path, root "/") == 1) {
-          rel = substr(path, length(root) + 2)
-        } else if (index(path, home "/") == 1) {
-          rel = "~/" substr(path, length(home) + 2)
-        } else {
-          rel = path
-        }
-        printf "%s\t%s %s\n", $1, rel, $3
+        n = split(path, parts, "/")
+        name = parts[n]
+        printf "%s\t%s %s\n", path, name, $3
       }' | fzf --height=80% --reverse --border \
           --with-nth=2.. \
-          --preview 'p={1}; echo "local:  $(git -C "$p" rev-parse --abbrev-ref HEAD 2>/dev/null)"; u=$(git -C "$p" rev-parse --abbrev-ref --symbolic-full-name "@{upstream}" 2>/dev/null) && echo "remote: $u" || echo "remote: none"; echo ""; git -C "$p" log --oneline -10 --decorate 2>/dev/null' \
+          --preview 'fish -c "__gwt_preview {1}"' \
           --preview-window=right:60%:wrap \
           | awk '{print $1}')
 
