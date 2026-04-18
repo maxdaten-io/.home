@@ -115,43 +115,99 @@ in
 
   home.packages = with pkgs; [
     notebooklm
-    (pkgs.buildNpmPackage rec {
-      pname = "claude-code";
-      version = "2.1.112";
+    (
+      let
+        claudeCodeVersion = "2.1.114";
 
-      src = pkgs.fetchurl {
-        url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz";
-        hash = "sha256-hDeZaepToOX9IxqPd96+THyxfdlx9ICdENM/muyl3gk=";
-      };
+        # Since 2.1.114 the npm package is a stub (`bin/claude.exe`) that a
+        # postinstall script replaces with a platform-specific native binary
+        # shipped via `optionalDependencies`. `buildNpmPackage` runs with
+        # `--ignore-scripts` and doesn't install optional deps for the host
+        # platform, so we fetch and install the native binary manually here.
+        #
+        # Hashes come directly from package-lock.json `integrity` fields (SRI).
+        nativePlatforms = {
+          "aarch64-darwin" = {
+            suffix = "darwin-arm64";
+            hash = "sha512-TVvlUA3VluCWibN+U9PIbrQrdxyX6tEORawaZnBOsEXzo/fXF8C61NgUN6KlZedgGZATrRflv3w+Im2vw+kfcg==";
+          };
+          "x86_64-darwin" = {
+            suffix = "darwin-x64";
+            hash = "sha512-1k3shOIjp1ra/URMbGiqUxJ/prbwfQdjg1Ms2SPlX2Mxo/NCNg+S5K0d4BfC/xUB3fYOe1OuoE3qbY4WKZPkiQ==";
+          };
+          "aarch64-linux" = {
+            suffix = "linux-arm64";
+            hash = "sha512-eIJaynRIzbWSmspLvrPZDXlKp+Jd3omi94sLdHznrzqRrU98eNEXNaBlcQQx1A5hbOEo2cx0QXOZV3idpeirPQ==";
+          };
+          "x86_64-linux" = {
+            suffix = "linux-x64";
+            hash = "sha512-4YX0ataEGqtgmXoYf97YQnbzh0xwegH4ZFP5d5LXBlJIXAB26cSIBNBPE+Eln8evguGJ9QzmHQBhSTdOl0DQAw==";
+          };
+        };
 
-      npmDepsHash = "sha256-ONpXdwGFfB7nQB/PttrHWkdS9k6GaZi2F/GPPeZevAY=";
+        nativePlatform =
+          nativePlatforms.${pkgs.stdenv.hostPlatform.system}
+            or (throw "claude-code: unsupported platform ${pkgs.stdenv.hostPlatform.system}");
 
-      # Get with `npm install @anthropic-ai/claude-code --package-lock-only`
-      postPatch = ''
-        cp ${./claude-code/package-lock.json} package-lock.json
-      '';
+        claudeCodeNative = pkgs.fetchurl {
+          url = "https://registry.npmjs.org/@anthropic-ai/claude-code-${nativePlatform.suffix}/-/claude-code-${nativePlatform.suffix}-${claudeCodeVersion}.tgz";
+          hash = nativePlatform.hash;
+        };
+      in
+      pkgs.buildNpmPackage rec {
+        pname = "claude-code";
+        version = claudeCodeVersion;
 
-      dontNpmBuild = true;
+        src = pkgs.fetchurl {
+          url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz";
+          hash = "sha256-IJKlrGrnEV9GuWFmLV3IcgOCGfN8+R7le3AEYUuHua8=";
+        };
 
-      env.AUTHORIZED = "1";
+        npmDepsHash = "sha256-UgnHYtuMartGPoK7YX2Ud8Hmc/D3AhoVeRUhy3zDM8s=";
 
-      postInstall = ''
-        wrapProgram $out/bin/claude \
-          --set DISABLE_AUTOUPDATER 1 \
-          --set ENABLE_CLAUDEAI_MCP_SERVERS false \
-          --run 'export GITHUB_PERSONAL_ACCESS_TOKEN=$(security find-generic-password -s "github-pat" -w 2>/dev/null)' \
-          --prefix PATH : "${claude-python}/bin" \
-          --unset DEV
-      '';
+        # Get with `npm install @anthropic-ai/claude-code --package-lock-only`
+        postPatch = ''
+          cp ${./claude-code/package-lock.json} package-lock.json
+        '';
 
-      nativeBuildInputs = [ pkgs.makeWrapper ];
+        dontNpmBuild = true;
 
-      meta = with pkgs.lib; {
-        description = "Claude Code - AI-powered coding assistant";
-        homepage = "https://www.npmjs.com/package/@anthropic-ai/claude-code";
-        license = licenses.unfree;
-        mainProgram = "claude";
-      };
-    })
+        env.AUTHORIZED = "1";
+
+        postInstall = ''
+          # Replace the bin/claude.exe stub with the real native binary.
+          # npm tgz archives extract to `package/<files>`.
+          nativeDir=$(mktemp -d)
+          ${pkgs.gnutar}/bin/tar -xzf ${claudeCodeNative} -C $nativeDir
+          install -m 755 $nativeDir/package/claude \
+            $out/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe
+          rm -rf $nativeDir
+
+          # buildNpmPackage generates $out/bin/claude as a bash wrapper that
+          # invokes `node claude.exe` — which fails since claude.exe is now a
+          # native binary, not JS. Replace it with a direct symlink so
+          # wrapProgram wraps the binary itself, not the node-invoking wrapper.
+          rm $out/bin/claude
+          ln -s $out/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe \
+            $out/bin/claude
+
+          wrapProgram $out/bin/claude \
+            --set DISABLE_AUTOUPDATER 1 \
+            --set ENABLE_CLAUDEAI_MCP_SERVERS false \
+            --run 'export GITHUB_PERSONAL_ACCESS_TOKEN=$(security find-generic-password -s "github-pat" -w 2>/dev/null)' \
+            --prefix PATH : "${claude-python}/bin" \
+            --unset DEV
+        '';
+
+        nativeBuildInputs = [ pkgs.makeWrapper ];
+
+        meta = with pkgs.lib; {
+          description = "Claude Code - AI-powered coding assistant";
+          homepage = "https://www.npmjs.com/package/@anthropic-ai/claude-code";
+          license = licenses.unfree;
+          mainProgram = "claude";
+        };
+      }
+    )
   ];
 }
