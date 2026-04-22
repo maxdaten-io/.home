@@ -154,12 +154,12 @@ in
           hash = nativePlatform.hash;
         };
       in
-      pkgs.buildNpmPackage rec {
+      pkgs.buildNpmPackage (finalAttrs: {
         pname = "claude-code";
         version = claudeCodeVersion;
 
         src = pkgs.fetchurl {
-          url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz";
+          url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${finalAttrs.version}.tgz";
           hash = "sha256-6QKr6gKxoxkNeUAycmf75TYQ606X82V1ba5s7j9ymzo=";
         };
 
@@ -232,7 +232,7 @@ in
           license = licenses.unfree;
           mainProgram = "claude";
         };
-      }
+      })
     )
   ];
 }
