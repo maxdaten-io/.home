@@ -216,6 +216,16 @@ in
 
         nativeBuildInputs = [ pkgs.makeWrapper ];
 
+        # Sanity-check that `claude --version` runs and reports the expected
+        # version at build time. Would have caught the 2.1.114 native-binary
+        # mismatch immediately instead of at runtime.
+        doInstallCheck = true;
+        nativeInstallCheckInputs = [
+          pkgs.versionCheckHook
+          pkgs.writableTmpDirAsHomeHook
+        ];
+        versionCheckKeepEnvironment = [ "HOME" ];
+
         meta = with pkgs.lib; {
           description = "Claude Code - AI-powered coding assistant";
           homepage = "https://www.npmjs.com/package/@anthropic-ai/claude-code";
