@@ -117,7 +117,7 @@ in
     notebooklm
     (
       let
-        claudeCodeVersion = "2.1.114";
+        claudeCodeVersion = "2.1.117";
 
         # Since 2.1.114 the npm package is a stub (`bin/claude.exe`) that a
         # postinstall script replaces with a platform-specific native binary
@@ -129,19 +129,19 @@ in
         nativePlatforms = {
           "aarch64-darwin" = {
             suffix = "darwin-arm64";
-            hash = "sha512-TVvlUA3VluCWibN+U9PIbrQrdxyX6tEORawaZnBOsEXzo/fXF8C61NgUN6KlZedgGZATrRflv3w+Im2vw+kfcg==";
+            hash = "sha512-+dflv71gbB8aZ5SvQtaDWA0FhhTczGQCr9wUtx3Ij6Iux+Tp6BT4rfAbuZhEPKEFzFoO6kf/Oj4DCp1KuulCHQ==";
           };
           "x86_64-darwin" = {
             suffix = "darwin-x64";
-            hash = "sha512-1k3shOIjp1ra/URMbGiqUxJ/prbwfQdjg1Ms2SPlX2Mxo/NCNg+S5K0d4BfC/xUB3fYOe1OuoE3qbY4WKZPkiQ==";
+            hash = "sha512-Z2RhIBbLR5WiXeM0ZCxr5Otcr7suDFWDO5Gi4cXvoNa8CLirZesoZPI0yvtIh3X7EH8R8dr8iZrNERguNbS4gA==";
           };
           "aarch64-linux" = {
             suffix = "linux-arm64";
-            hash = "sha512-eIJaynRIzbWSmspLvrPZDXlKp+Jd3omi94sLdHznrzqRrU98eNEXNaBlcQQx1A5hbOEo2cx0QXOZV3idpeirPQ==";
+            hash = "sha512-ymELfVJeE35elgejSXzXLEHLbm3hebZc0fwcoBwhKrzWBbfwvm2ph1ZFPJ2PuSrsDZwU2RAyMLVJbQLqEJhGNw==";
           };
           "x86_64-linux" = {
             suffix = "linux-x64";
-            hash = "sha512-4YX0ataEGqtgmXoYf97YQnbzh0xwegH4ZFP5d5LXBlJIXAB26cSIBNBPE+Eln8evguGJ9QzmHQBhSTdOl0DQAw==";
+            hash = "sha512-bhN6qnc9xchKQqKWdwuZazEeSO+9NIhOPcoD/WgqTK5QRPSAwnvo5SZWIQUbkNbTKLaMwuxAu3u+Fj/jYbiidg==";
           };
         };
 
@@ -160,10 +160,10 @@ in
 
         src = pkgs.fetchurl {
           url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz";
-          hash = "sha256-IJKlrGrnEV9GuWFmLV3IcgOCGfN8+R7le3AEYUuHua8=";
+          hash = "sha256-6QKr6gKxoxkNeUAycmf75TYQ606X82V1ba5s7j9ymzo=";
         };
 
-        npmDepsHash = "sha256-UgnHYtuMartGPoK7YX2Ud8Hmc/D3AhoVeRUhy3zDM8s=";
+        npmDepsHash = "sha256-kq0nlxXdBEbJneCYg07i0bfsK8rKZZ9DAKXQAdKyJrA=";
 
         # Get with `npm install @anthropic-ai/claude-code --package-lock-only`
         postPatch = ''
