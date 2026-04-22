@@ -199,10 +199,17 @@ in
             --set ENABLE_CLAUDEAI_MCP_SERVERS false \
             --run 'export GITHUB_PERSONAL_ACCESS_TOKEN=$(security find-generic-password -s "github-pat" -w 2>/dev/null)' \
             --prefix PATH : "${
-              pkgs.lib.makeBinPath [
-                pkgs.procps
-                claude-python
-              ]
+              pkgs.lib.makeBinPath (
+                [
+                  pkgs.procps
+                  claude-python
+                ]
+                # claude-code's sandbox mode on Linux shells out to these.
+                ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+                  pkgs.bubblewrap
+                  pkgs.socat
+                ]
+              )
             }" \
             --unset DEV
         '';
