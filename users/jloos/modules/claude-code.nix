@@ -197,7 +197,12 @@ in
             --set DISABLE_AUTOUPDATER 1 \
             --set ENABLE_CLAUDEAI_MCP_SERVERS false \
             --run 'export GITHUB_PERSONAL_ACCESS_TOKEN=$(security find-generic-password -s "github-pat" -w 2>/dev/null)' \
-            --prefix PATH : "${claude-python}/bin" \
+            --prefix PATH : "${
+              pkgs.lib.makeBinPath [
+                pkgs.procps
+                claude-python
+              ]
+            }" \
             --unset DEV
         '';
 
