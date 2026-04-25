@@ -73,6 +73,13 @@ in
       set __done_enabled
     '';
 
+    interactiveShellInit = ''
+      # devenv auto-activation: https://devenv.sh/auto-activation/
+      if command -q devenv
+          devenv hook fish | source
+      end
+    '';
+
     functions.fish_reload = "source ~/.config/fish/config.fish";
 
     functions.__gwt_preview = ''
