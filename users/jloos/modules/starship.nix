@@ -83,7 +83,6 @@ in
           $username
           [${pl.arrow}](bg:color_yellow fg:color_orange)
           $directory
-          $nix_shell
           [${pl.arrow}](fg:color_yellow bg:color_aqua)
           $git_branch
           $git_status
@@ -99,7 +98,7 @@ in
           $memory_usage
           $cmd_duration
           [${pl.rcap} ](fg:color_bg1)
-          $line_break$jobs$shell$status$character '';
+          $line_break$jobs$shell$nix_shell$status$character '';
 
         os = {
           disabled = false;
@@ -147,11 +146,11 @@ in
         };
 
         nix_shell = {
-          format = "[$symbol$state ]($style)";
+          format = "[$symbol$state]($style) ";
           impure_msg = "";
           pure_msg = "λ";
           symbol = builtins.fromJSON ''"\uF313"'';
-          style = "fg:color_fg0 bg:color_yellow";
+          style = "bold cyan";
         };
 
         git_branch = {
