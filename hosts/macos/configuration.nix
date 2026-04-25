@@ -63,4 +63,19 @@
 
   security.pam.services.sudo_local.touchIdAuth = true;
   security.pam.services.sudo_local.reattach = true;
+
+  # Raise file descriptor limits — Determinate Nix lazy-trees + libgit2
+  # opens many files when populating ~/.cache/nix/tarball-cache-v2/.
+  launchd.daemons.limit-maxfiles.serviceConfig = {
+    Label = "limit.maxfiles";
+    ProgramArguments = [
+      "launchctl"
+      "limit"
+      "maxfiles"
+      "65536"
+      "524288"
+    ];
+    RunAtLoad = true;
+    ServiceIPC = false;
+  };
 }
