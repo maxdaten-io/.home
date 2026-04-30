@@ -2,12 +2,11 @@
 {
   programs.zoxide = {
     enable = true;
-
     enableFishIntegration = true;
-  };
-
-  programs.fish.shellAliases = {
-    cd = "z";
+    options = [
+      "--cmd"
+      "cd"
+    ];
   };
 
   programs.fish.functions = {
