@@ -30,7 +30,6 @@ update:
     git add devenv.lock && git commit -m "chore(devenv): Update devenv.lock" || true
     nix flake update --commit-lock-file
     just _update-and-commit-npm claude-code
-    just _update-and-commit-npm playwright-cli
     just _update-and-commit-pypi notebooklm
 
 # Update flake inputs and switch in one command
@@ -55,10 +54,6 @@ run-hooks:
 # Update claude-code to a specific version (or latest if no version given)
 update-claude-code version="":
     ./scripts/update-claude-code.sh {{version}}
-
-# Update playwright-cli to a specific version (or latest if no version given)
-update-playwright-cli version="":
-    ./scripts/update-playwright-cli.sh {{version}}
 
 # Update notebooklm to a specific version (or latest if no version given)
 update-notebooklm version="":
