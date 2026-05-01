@@ -52,7 +52,7 @@
     };
 
     # Developer environment (devenv 2.0)
-    devenv.url = "github:cachix/devenv/cb344e4a5ab9241ae49739352c24268d5f8be13b";
+    devenv.url = "github:cachix/devenv/da4531a7d9b79199b9e56802cb1006ce492c613b";
 
     # Code formatting
     treefmt-nix.url = "github:numtide/treefmt-nix";
