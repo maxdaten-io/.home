@@ -78,7 +78,6 @@ in
   home.packages =
     with pkgs;
     [
-      direnv
       just
       nodejs
       python3

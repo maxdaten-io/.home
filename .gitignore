@@ -1,7 +1,6 @@
 result*
 *.img
 
-.direnv
 .nix-store
 
 # Secrets

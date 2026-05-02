@@ -32,7 +32,6 @@
     nixd
     # devenv
     inputs.devenv.packages.${pkgs.stdenv.hostPlatform.system}.devenv
-    direnv
   ];
 
   nix.enable = false;

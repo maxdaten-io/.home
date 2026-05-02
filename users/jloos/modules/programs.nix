@@ -18,11 +18,4 @@
       eval "$(devenv hook zsh)"
     fi
   '';
-  programs.direnv.enable = true;
-  programs.direnv.nix-direnv.enable = true;
-  programs.direnv.config = {
-    global = {
-      log_filter = "^$";
-    };
-  };
 }
