@@ -44,9 +44,8 @@
         font_size = 14;
       };
 
-      # Features
-      features = {
-        edit_prediction_provider = "zed";
+      edit_predictions = {
+        provider = "zed";
       };
 
       # Agent (replaces assistant in new format)
