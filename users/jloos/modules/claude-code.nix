@@ -105,6 +105,14 @@ in
 
     For GitHub interactions (issues, PRs, releases, repo metadata, API calls), prefer the `gh` CLI when available over raw `git`, web URLs, or scraping. Use `gh api` for anything not covered by a dedicated subcommand.
 
+    ## Reports and Reviews
+
+    For complex reports, reviews, audits, or analyses (security reviews, PR reviews, codebase audits, technical deep-dives, comparison matrices) — offer to produce a single self-contained HTML file alongside or instead of plain markdown. Embed everything in one file: inline CSS, SVG diagrams, color-coded severity, in-page navigation, expandable sections, and inline annotations where they help. The file should open standalone in a browser with no external assets.
+
+    These reports should be **visually compelling** — treat the output as a piece of work product, not a text dump. Apply real typography, hierarchy, whitespace, and a coherent color system. Use **interactivity reasonably**: collapsible sections, filterable tables, tabs, and hover details when they aid navigation; skip novelty animations and gimmicks that don't earn their weight. Add **graphs, charts, and diagrams** (inline SVG, flowcharts, sequence diagrams, comparison plots, architecture sketches) when they fit the didactic model — i.e. when a picture genuinely communicates a relationship, distribution, or flow better than prose.
+
+    Treat HTML as a deliberate format choice when richer presentation genuinely aids comprehension — not as a default for short answers or simple questions. Inspired by Simon Willison's *The unreasonable effectiveness of single-page HTML reports*.
+
     ## Developer Profile
 
     Read `~/.claude/get-shit-done/USER-PROFILE.md` for behavioral preferences and directives on how to interact with this developer. Apply the directives based on their confidence level.
