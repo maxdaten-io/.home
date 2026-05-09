@@ -165,7 +165,7 @@ in
           hash = "sha256-fUscoaaF95jnDvQiQgsE87svEwOdzPNuiGsGZBY33ks=";
         };
 
-        npmDepsHash = "sha256-klhzCiM1QeaUAhvMzQy17EW2iFaLMW329HmxzB9q0Bg=";
+        npmDepsHash = "sha256-S1b5dq9/fn+LxAnf/SKVkK5nDmeSfz9s97MNaNWEObE=";
 
         strictDeps = true;
 
