@@ -51,8 +51,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Developer environment (devenv 2.0)
-    devenv.url = "github:cachix/devenv/2cf62a010000b70f15c78a72761fad7c9e6fb47a";
+    # Developer environment (devenv 2.1.1)
+    devenv.url = "github:cachix/devenv/bec7c52c91a6b0eaf6c14c70c995b918d7d5f2d7";
 
     # Code formatting
     treefmt-nix.url = "github:numtide/treefmt-nix";
