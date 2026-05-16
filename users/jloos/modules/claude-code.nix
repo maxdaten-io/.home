@@ -16,13 +16,13 @@ let
 
   notebooklm = pkgs.python312Packages.buildPythonApplication rec {
     pname = "notebooklm-py";
-    version = "0.4.0";
+    version = "0.4.1";
     pyproject = true;
 
     src = pkgs.fetchPypi {
       pname = "notebooklm_py";
       inherit version;
-      hash = "sha256-/U6mFL/FPRJDQbtJvOfqgbNf/Zk+lLkpPW5k1Xhtlnk=";
+      hash = "sha256-1ClHPIEbKfVY5DvszqxLO2wNZItOM+tjt99zKJOqA88=";
     };
 
     build-system = with pkgs.python312Packages; [
@@ -127,7 +127,7 @@ in
     notebooklm
     (
       let
-        claudeCodeVersion = "2.1.139";
+        claudeCodeVersion = "2.1.143";
 
         # Since 2.1.114 the npm package is a stub (`bin/claude.exe`) that a
         # postinstall script replaces with a platform-specific native binary
@@ -139,19 +139,19 @@ in
         nativePlatforms = {
           "aarch64-darwin" = {
             suffix = "darwin-arm64";
-            hash = "sha512-2OnJCrL/LO8GgfgKBrmTwLhiC9S/UJbbEpeP5oz44InbhREhFU4rFuRc49pmDyUmT5yje8dNJ00ZVXiXnOOOVw==";
+            hash = "sha512-O+4ifRZYNgM2oaWaEr922zmNNT5yX2loscvASoWpZzKCo6ZWcUGxqptVy2hVo3EeoqewNzIS8iewDqKkkL8kvw==";
           };
           "x86_64-darwin" = {
             suffix = "darwin-x64";
-            hash = "sha512-7Wt45d4e0V6SZHq5TgDA+5Jm1uBztRQ1wzqbPe5atmf8S12RLK0d2r5h50YK1HsUqQvdvRmZBnvSvz2QFrFjBQ==";
+            hash = "sha512-pQIB1nKe86TkdI8nyP1IAB3Zu4pIjdDck8DgNdio5Jhgl+qK1IUKT0G46uEFCI/FkZDjVy1KkHhSJojx8Rph6Q==";
           };
           "aarch64-linux" = {
             suffix = "linux-arm64";
-            hash = "sha512-xE3s+MSxm1n9Ywq5+L83eBsv+bJNy77MEUE8au49+bwD8/LQP07gO6YP9PFTbpwMvUe4aQKwKXG16uGj1ABvHg==";
+            hash = "sha512-JhmzqVYAJGRe/5TRrvIQMo3d8YL2FGZS5V7/mrEPkYYt9yQzCa47vKP0Pty5+jJ6cWZZNU+dqUwQlPlT8FF2XA==";
           };
           "x86_64-linux" = {
             suffix = "linux-x64";
-            hash = "sha512-BwfSmFhas8MkOtYweY23gHPJTasHzklDSBGqWaae/ObTmk7swiz6NYSaP7DEbrWa1WSl3PTgduFq9/fJVhYNGQ==";
+            hash = "sha512-gnlVMesO1nHh8DDyZpbmBIkIUN3rdap5SVxccZ8GRey1ZG25BByyy9I0MA0trmPRtB1/6vRW7yM4Er2JjzdUHQ==";
           };
         };
 
@@ -170,10 +170,10 @@ in
 
         src = pkgs.fetchurl {
           url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${finalAttrs.version}.tgz";
-          hash = "sha256-QR4sUA1i1Ap4D0FUt8v50ulQA7zqs2vJn/oXRwT9VrA=";
+          hash = "sha256-yMoDpx1/aMvoKCd+lblbpj5CvBg2IHEA024306EaUWY=";
         };
 
-        npmDepsHash = "sha256-22496SWkC2VDw/0NaA4sJIfbLkUDQNtuFnyDnPYrD8o=";
+        npmDepsHash = "sha256-Qy59HKccxiSMgPxpJ7Ogk+Z/veVjyPMCLlKFxViPbTc=";
 
         strictDeps = true;
 
