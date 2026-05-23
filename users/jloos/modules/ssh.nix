@@ -3,10 +3,10 @@
   programs.ssh.enable = true;
   programs.ssh.package = pkgs.openssh;
   programs.ssh.enableDefaultConfig = false;
-  programs.ssh.matchBlocks = {
+  programs.ssh.settings = {
     "enalytics" = {
-      hostname = "142.132.133.78";
-      user = "jpl";
+      HostName = "142.132.133.78";
+      User = "jpl";
     };
   };
 }
