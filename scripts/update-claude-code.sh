@@ -34,7 +34,7 @@ resolve_latest_version() {
 # shellcheck disable=SC2153
 post_update_hook() {
   local changelog
-  info "Changelog highlights (${OLD_VERSION} → ${NEW_VERSION}):"
+  info "Changelog (${OLD_VERSION} → ${NEW_VERSION}):"
   echo ""
 
   changelog=$(curl -fsSL "${GITHUB_REPO}/raw/refs/heads/main/CHANGELOG.md" 2>/dev/null) || {
@@ -42,15 +42,39 @@ post_update_hook() {
     return 0
   }
 
-  echo "$changelog" | awk -v target="$NEW_VERSION" -v current="$OLD_VERSION" '
+  # Print per-version sections oldest-first so the newest lands near the prompt.
+  local sections
+  sections=$(echo "$changelog" | awk -v target="$NEW_VERSION" -v current="$OLD_VERSION" '
     /^## / {
       v = $2
       gsub(/^v/, "", v)
-      if (v == target) { printing = 1 }
+      if (v == target)       { printing = 1; idx++; versions[idx] = v }
       else if (v == current) { printing = 0 }
+      else if (printing)     { idx++; versions[idx] = v }
+      next
     }
-    printing { print }
-  '
+    printing { sections[idx] = sections[idx] $0 "\n" }
+    END {
+      for (i = idx; i >= 1; i--) {
+        printf "## %s\n\n%s", versions[i], sections[i]
+      }
+    }
+  ')
+
+  printf "%s" "$sections"
+
+  # Ask claude itself to pick out the most impactful changes. Best-effort —
+  # if claude is unavailable (fresh install, offline, rate-limited) we skip
+  # the highlights and the per-version detail above is still useful.
+  if [ -z "$sections" ] || ! command -v claude >/dev/null 2>&1; then
+    return 0
+  fi
+
+  printf "\n## Highlights (%s → %s)\n\n" "$OLD_VERSION" "$NEW_VERSION"
+  local prompt="Summarize the most interesting and impactful changes from this claude-code changelog as 5-8 short bullets. Focus on new features, behavior changes, and renamed/breaking items — skip routine bug fixes unless they fix something widely impactful. Tag each bullet with the version it landed in, like '(2.1.147)'. Output only the bullets, no preamble or trailing commentary."
+  printf "%s" "$sections" | claude -p "$prompt" 2>/dev/null || {
+    warn "claude -p failed — skipping highlights"
+  }
 }
 
 # ---------------------------------------------------------------------------
