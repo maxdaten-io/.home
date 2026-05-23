@@ -127,7 +127,7 @@ in
     notebooklm
     (
       let
-        claudeCodeVersion = "2.1.146";
+        claudeCodeVersion = "2.1.150";
 
         # Since 2.1.114 the npm package is a stub (`bin/claude.exe`) that a
         # postinstall script replaces with a platform-specific native binary
@@ -139,19 +139,19 @@ in
         nativePlatforms = {
           "aarch64-darwin" = {
             suffix = "darwin-arm64";
-            hash = "sha512-1xRFcJRazPa/UU8IalR+2rP9Glwylc3OFlENm1+/PmdIa604s5B1wNygkvcqhVmE8rJO65uyJXjfB3CKtq0PQA==";
+            hash = "sha512-k59/NkFmevUGc9C6zSiRbLYZy2W/fUemSXHu1wBiARSnO48e5P4lx9qzgt1vcl9vEDD5yUiYrKlSlxFvVcVvvw==";
           };
           "x86_64-darwin" = {
             suffix = "darwin-x64";
-            hash = "sha512-Wg34dsZG07CsdFydbPSoEaxY9KovqCxLrO/h9wpFiTMoJhlm3xWru3c4iW1cvpaed6W2kZFJSGyqeVsgZCzZ3g==";
+            hash = "sha512-8lG6vQ7fTN2wjZVZszZuQydJTozK97iqjtzOb6X5dcB+rWbODf2V0ocLhV8pCFh7UtE+LwGI14CsitAal6bHiQ==";
           };
           "aarch64-linux" = {
             suffix = "linux-arm64";
-            hash = "sha512-I20fmJwaT46rd5SdI117rX2ktFYA74L+ldQWmGGle3Dn4MuPQBGC+pZBcp8dlR4ydkC4HWyvyTNECu+BHpW6iQ==";
+            hash = "sha512-PSJsTR28Jgzvusb7k6T00S9SIUpatzDIoW0eIUpDxN5/sD/SrVpnC4wgNXC2taJIiWAcFO0YUVeKNu8CYc5pCw==";
           };
           "x86_64-linux" = {
             suffix = "linux-x64";
-            hash = "sha512-OL1laix9AFc/n6/vVynQQtUsMQrHJXtpQs7m1sp3na7gRqxdr9TEUSQ7ZcoCD6uuFdXZnVHf6+tI14Og/D2RLQ==";
+            hash = "sha512-Y67nRYuFu0vLv8t/qEMi2lHz3yZyhWGhvlrfpwHFsCpAJRFGVJtfbbxBq5Adm+2Z1PMAWAZXSDU3PfHPRy2B4g==";
           };
         };
 
@@ -170,10 +170,10 @@ in
 
         src = pkgs.fetchurl {
           url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${finalAttrs.version}.tgz";
-          hash = "sha256-wbHbQIgYOyP6/0Weid3oMxZnFEr3ho8CiEI7/8RVlGk=";
+          hash = "sha256-ZB5lGCI89WTeefM88aYJh0Ugiyg49xIjyrUHuH+pzlY=";
         };
 
-        npmDepsHash = "sha256-Dr4Th56nBMWYpCZLpNjidhwikoJJx2OZ12f8JIdBw8E=";
+        npmDepsHash = "sha256-cpIWfiwbBm4OJID31zZ0QkJORk6BAFbHWhI9HYTCNPs=";
 
         strictDeps = true;
 
