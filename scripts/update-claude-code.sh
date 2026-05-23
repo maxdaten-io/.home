@@ -70,9 +70,26 @@ post_update_hook() {
     return 0
   fi
 
-  printf "\n## Highlights (%s → %s)\n\n" "$OLD_VERSION" "$NEW_VERSION"
-  local prompt="Summarize the most interesting and impactful changes from this claude-code changelog as 5-8 short bullets. Focus on new features, behavior changes, and renamed/breaking items — skip routine bug fixes unless they fix something widely impactful. Tag each bullet with the version it landed in, like '(2.1.147)'. Output only the bullets, no preamble or trailing commentary."
-  printf "%s" "$sections" | claude -p "$prompt" 2>/dev/null || {
+  # Only summarize the newest version — the user has already glanced past
+  # the older sections by the time they read the highlights at the prompt.
+  local newest_section
+  newest_section=$(echo "$changelog" | awk -v target="$NEW_VERSION" '
+    /^## / {
+      v = $2
+      gsub(/^v/, "", v)
+      if (v == target) { printing = 1; print; next }
+      else if (printing) { exit }
+    }
+    printing { print }
+  ')
+
+  if [ -z "$newest_section" ]; then
+    return 0
+  fi
+
+  printf "\n## Highlights (%s)\n\n" "$NEW_VERSION"
+  local prompt="Summarize the most interesting and impactful changes from this claude-code release as 5-8 short bullets. Focus on new features, behavior changes, and renamed/breaking items — skip routine bug fixes unless they fix something widely impactful. Output only the bullets, no preamble or trailing commentary."
+  printf "%s" "$newest_section" | claude -p "$prompt" 2>/dev/null || {
     warn "claude -p failed — skipping highlights"
   }
 }
