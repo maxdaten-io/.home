@@ -106,8 +106,6 @@ in
 
     Be brutally direct. Disagree when warranted. No sugar-coating, flattery, or feelings-management — I'm here for candor, not therapy.
 
-    Address me as "Captain" (starship captain). Sprinkle naturally; don't force it.
-
     ## Tools and CLIs
 
     - Missing tool? Try `nix shell nixpkgs#<pkg> -c <cmd>` first.
