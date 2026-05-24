@@ -41,7 +41,15 @@ let
     };
 
     # Markdown formatting
-    programs.mdformat.enable = true;
+    #
+    # mdformat-frontmatter teaches mdformat to preserve YAML frontmatter
+    # (--- delimiters) instead of treating it as a setext horizontal rule.
+    # Required for Claude skill files (.claude/skills/**/SKILL.md) and any
+    # other Jekyll/Hugo/MkDocs-style markdown.
+    programs.mdformat = {
+      enable = true;
+      package = pkgs.mdformat.withPlugins (ps: with ps; [ mdformat-frontmatter ]);
+    };
   };
 in
 {
