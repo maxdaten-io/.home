@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ADR-0001 · Container Runtime on Apple Silicon</title>
+<link rel="stylesheet" href="adr.css">
+</head>
+<body>
+<main>
+
+<header>
+  <div class="meta">
+    <span>ADR-0001</span>
+    <span class="sep">·</span>
+    <span>2026-05-24</span>
+    <span class="sep">·</span>
+    <span>jloos</span>
+    <span class="sep">·</span>
+    <span class="status-line status-accepted">
+      <span class="status-dot" aria-hidden="true"></span>
+      Accepted
+    </span>
+  </div>
+
+  <h1 class="title">Container runtime on Apple Silicon: OrbStack as primary, Colima as OSS fallback</h1>
+
+  <p class="lede">
+    Replace Docker Desktop with a nix-packaged runtime that can build and run
+    <code>linux/amd64</code> images via Rosetta on Apple Silicon, without sacrificing
+    declarative config.
+  </p>
+
+  <hr class="rule">
+</header>
+
+<h2 data-num="I">Context</h2>
+<p>
+  This repo configures a macOS workstation (Apple Silicon, M-series) declaratively
+  via <code>nix-darwin</code> + <code>home-manager</code>. Container workloads currently
+  rely on Docker Desktop, which presents three friction points:
+</p>
+<ul>
+  <li><strong>Resource cost</strong> — 3–4 GB idle RAM, 30–45 s cold start.</li>
+  <li><strong>Licensing risk</strong> — commercial-use limits if employment context changes.</li>
+  <li><strong>Declarative config gap</strong> — Docker Desktop installs out-of-band, fragmenting the nix-managed system.</li>
+</ul>
+<p>
+  We also need to <strong>build and run <code>linux/amd64</code> images</strong> for
+  compatibility with CI registries and upstream images lacking ARM variants. Since
+  Apple opened <strong>Rosetta 2 to Linux VMs</strong> via Virtualization.framework,
+  x86 Linux binaries now run at ~70–90% native speed inside a Linux VM — a category
+  shift from QEMU userland emulation (5–20× slower).
+</p>
+
+<h2 data-num="II">Decision</h2>
+
+<div class="decision">
+  <div class="decision-line"><strong>Primary</strong> Install <code>orbstack</code> via nixpkgs as the daily-driver container runtime.</div>
+  <div class="decision-line"><strong>Fallback</strong> Keep <code>colima</code> available as the fully-OSS escape hatch.</div>
+</div>
+
+<p>
+  Both tools expose a Docker-compatible API, share <code>docker-client</code> and
+  <code>docker-buildx</code> as the CLI surface, and use Apple's Virtualization.framework
+  with Rosetta for amd64. Switching between them requires no application code changes.
+</p>
+
+<h2 data-num="III">Alternatives Considered</h2>
+
+<div class="table-wrap">
+<table class="compare">
+  <thead>
+    <tr>
+      <th></th>
+      <th class="pick">OrbStack</th>
+      <th>Colima</th>
+      <th>Podman</th>
+      <th>Rancher Desktop</th>
+      <th>Docker Desktop</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="row-label">In nixpkgs</td>
+      <td class="pick">Yes</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>No (cask)</td>
+      <td>No (cask)</td>
+    </tr>
+    <tr>
+      <td class="row-label">amd64 via Rosetta</td>
+      <td class="pick">Seamless</td>
+      <td>via <code>--vz-rosetta</code></td>
+      <td>Known rough edges</td>
+      <td>Yes</td>
+      <td>Yes</td>
+    </tr>
+    <tr>
+      <td class="row-label">Idle RAM</td>
+      <td class="pick">200–500 MB</td>
+      <td>500 MB – 2 GB</td>
+      <td>~2 GB</td>
+      <td>~1.5 GB</td>
+      <td>3–4 GB</td>
+    </tr>
+    <tr>
+      <td class="row-label">Cold start</td>
+      <td class="pick">~2 s</td>
+      <td>10–15 s</td>
+      <td>10–20 s</td>
+      <td>5–10 s</td>
+      <td>30–45 s</td>
+    </tr>
+    <tr>
+      <td class="row-label">License</td>
+      <td class="pick">Free personal · $8/user commercial</td>
+      <td>MIT</td>
+      <td>Apache 2.0</td>
+      <td>Apache 2.0</td>
+      <td>Free &lt;250 emp · paid above</td>
+    </tr>
+    <tr>
+      <td class="row-label">File I/O</td>
+      <td class="pick">Custom, fastest in benchmarks</td>
+      <td>VirtioFS</td>
+      <td>VirtioFS</td>
+      <td>VirtioFS / sshfs</td>
+      <td>VirtioFS</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<details>
+  <summary>Why not Podman?</summary>
+  <p>Daemonless / rootless-first architecture is appealing, but 2025 reports cite Rosetta integration bugs on Apple Silicon. For "run amd64 reliably" it's the weakest of the OSS three. Reconsider if those issues resolve and rootless becomes a hard requirement.</p>
+</details>
+
+<details>
+  <summary>Why not Rancher Desktop?</summary>
+  <p>Not packaged in nixpkgs. Adopting it means a homebrew cask escape hatch — fragmenting the declarative config, the very problem driving this ADR. The k3s integration is nice but doesn't outweigh the loss of single-source-of-truth.</p>
+</details>
+
+<details>
+  <summary>Why not Apple Container (macOS 26+)?</summary>
+  <p>Per-container VM isolation is interesting but Swift-only SDK (no <code>dockerode</code> equivalent), no buildx integration, and binds to a macOS version we can't yet require across all hosts. Revisit when the ecosystem matures.</p>
+</details>
+
+<h2 data-num="IV">Consequences</h2>
+
+<div class="consequences">
+  <section class="conseq conseq-ok">
+    <h4>Positive</h4>
+    <ul>
+      <li>~15× faster startup, ~10× less idle RAM vs. Docker Desktop.</li>
+      <li>Single declarative install path via nixpkgs.</li>
+      <li>amd64 builds via <code>docker buildx</code> with no extra setup.</li>
+      <li>OSS fallback (Colima) configured — low switching cost.</li>
+    </ul>
+  </section>
+  <section class="conseq conseq-warn">
+    <h4>Neutral / Tradeoff</h4>
+    <ul>
+      <li>OrbStack is closed-source; binary fetched from upstream, not built from source.</li>
+      <li>One-time GUI permission grant (Virtualization.framework + Rosetta) outside the nix flow.</li>
+      <li>Commercial use requires $8/user/mo — revisit if employment context changes.</li>
+    </ul>
+  </section>
+  <section class="conseq conseq-bad">
+    <h4>Negative</h4>
+    <ul>
+      <li>Binds container DX to a single vendor with no community fork option.</li>
+      <li>UI features (volumes browser, log viewer) create habits that don't transfer to CI or remote hosts.</li>
+    </ul>
+  </section>
+</div>
+
+<h2 data-num="V">Implementation</h2>
+
+<p>Add to <code>home.packages</code> in the appropriate module:</p>
+
+<pre><code>home.packages = with pkgs; [
+  orbstack
+  docker-client     # CLI only; OrbStack provides the daemon
+  docker-buildx
+];</code></pre>
+
+<p>One-time setup:</p>
+<ol>
+  <li>Launch OrbStack via Spotlight to grant Virtualization.framework + Rosetta permissions.</li>
+  <li>Verify amd64: <code>docker run --rm --platform linux/amd64 alpine uname -m</code> → <code>x86_64</code>.</li>
+  <li>Verify buildx: <code>docker buildx build --platform linux/amd64,linux/arm64 -t test .</code>.</li>
+</ol>
+
+<p>Colima fallback path:</p>
+<pre><code>colima start --vm-type vz --vz-rosetta --arch aarch64 --cpu 4 --memory 8</code></pre>
+
+<footer class="colophon">
+  Format · <a href="../../.claude/skills/adr/SKILL.md">ADR skill</a> · Style · <a href="adr.css">adr.css</a><br>
+  Inspired by Michael Nygard's <a href="https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions">Documenting Architecture Decisions</a> and editorial design systems (Remarque, Stripe Press, Wired).
+</footer>
+
+</main>
+</body>
+</html>

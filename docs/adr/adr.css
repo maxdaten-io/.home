@@ -1,0 +1,472 @@
+/* ============================================================
+ * ADR design system — editorial, typography-led, restrained
+ *
+ * Shared by all docs/adr/*.html files. Update here once;
+ * every ADR inherits.
+ *
+ * Inspirations: Remarque (typography is the interface),
+ * Wired Design System (stark editorial + one accent),
+ * Stripe Press (sidebars by label not box).
+ *
+ * Constraint: system fonts only — no web font imports.
+ * Color: OKLCH for perceptual uniformity across hues.
+ * ============================================================ */
+
+:root {
+  /* Type families — system stacks, no web fonts */
+  --serif: ui-serif, "New York", "Iowan Old Style", "Palatino Linotype",
+           "URW Palladio L", P052, Georgia, serif;
+  --sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI Variable Text",
+          "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code",
+          Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* Type scale — 1.250 (major third) ratio */
+  --t-display: 2.75rem;
+  --t-h2: 1.375rem;
+  --t-h3: 1.0625rem;
+  --t-body: 1.0625rem;
+  --t-small: 0.9375rem;
+  --t-meta: 0.8125rem;
+  --t-micro: 0.75rem;
+
+  /* Line heights */
+  --lh-display: 1.1;
+  --lh-tight: 1.3;
+  --lh-body: 1.7;
+
+  /* Spacing — 8px-derived, editorial generous */
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.75rem;
+  --s-4: 1rem;
+  --s-6: 1.5rem;
+  --s-8: 2rem;
+  --s-12: 3rem;
+  --s-16: 4rem;
+  --s-24: 6rem;
+
+  /* Color — OKLCH (perceptually uniform) */
+  --paper:       oklch(0.985 0.004 85);
+  --paper-elev:  oklch(1     0     0);
+  --ink:         oklch(0.20  0.012 70);
+  --ink-2:       oklch(0.38  0.010 70);
+  --ink-3:       oklch(0.55  0.008 70);
+  --ink-4:       oklch(0.70  0.005 70);
+  --rule:        oklch(0.90  0.005 85);
+  --rule-strong: oklch(0.82  0.008 85);
+
+  --accent:      oklch(0.45  0.15  255);
+  --accent-soft: oklch(0.97  0.02  255);
+
+  --tint:        oklch(0.95  0.012 85);
+
+  /* Semantic status — matched lightness for visual parity */
+  --ok-fg:    oklch(0.42  0.14  145);
+  --ok-bar:   oklch(0.62  0.16  145);
+  --ok-soft:  oklch(0.96  0.04  145);
+
+  --warn-fg:  oklch(0.52  0.14  75);
+  --warn-bar: oklch(0.70  0.16  75);
+  --warn-soft:oklch(0.97  0.04  75);
+
+  --bad-fg:   oklch(0.48  0.18  25);
+  --bad-bar:  oklch(0.62  0.20  25);
+  --bad-soft: oklch(0.96  0.04  25);
+
+  --neutral-fg:  oklch(0.45  0.01 70);
+  --neutral-bar: oklch(0.65  0.01 70);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper:       oklch(0.18  0.008 85);
+    --paper-elev:  oklch(0.22  0.008 85);
+    --ink:         oklch(0.95  0.005 85);
+    --ink-2:       oklch(0.78  0.005 85);
+    --ink-3:       oklch(0.62  0.005 85);
+    --ink-4:       oklch(0.48  0.005 85);
+    --rule:        oklch(0.30  0.008 85);
+    --rule-strong: oklch(0.38  0.008 85);
+
+    --accent:      oklch(0.75  0.13  255);
+    --accent-soft: oklch(0.25  0.04  255);
+
+    --tint:        oklch(0.24  0.008 85);
+
+    --ok-fg:    oklch(0.78  0.14  145);
+    --ok-bar:   oklch(0.62  0.16  145);
+    --ok-soft:  oklch(0.28  0.05  145);
+
+    --warn-fg:  oklch(0.82  0.13  75);
+    --warn-bar: oklch(0.70  0.16  75);
+    --warn-soft:oklch(0.30  0.05  75);
+
+    --bad-fg:   oklch(0.78  0.15  25);
+    --bad-bar:  oklch(0.62  0.20  25);
+    --bad-soft: oklch(0.30  0.06  25);
+
+    --neutral-fg:  oklch(0.72  0.01 70);
+    --neutral-bar: oklch(0.55  0.01 70);
+  }
+}
+
+/* ============================================================
+ * Reset & base
+ * ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: var(--t-body);
+  line-height: var(--lh-body);
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+main {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: var(--s-24) clamp(var(--s-6), 4vw, var(--s-12)) var(--s-16);
+}
+
+/* ============================================================
+ * Header — editorial title block
+ * ============================================================ */
+
+.meta {
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  color: var(--ink-3);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  align-items: center;
+  margin-bottom: var(--s-6);
+}
+
+.meta .sep {
+  color: var(--ink-4);
+  user-select: none;
+}
+
+.status-line {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.status-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 0;
+  background: currentColor;
+}
+
+.status-accepted   { color: var(--ok-bar); }
+.status-proposed   { color: var(--warn-bar); }
+.status-deprecated { color: var(--bad-bar); }
+.status-superseded { color: var(--neutral-bar); }
+
+h1.title {
+  font-family: var(--serif);
+  font-size: var(--t-display);
+  line-height: var(--lh-display);
+  font-weight: 500;
+  letter-spacing: -0.018em;
+  margin: 0 0 var(--s-6);
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.lede {
+  font-family: var(--serif);
+  font-size: 1.25rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+  margin: 0 0 var(--s-12);
+  font-style: italic;
+}
+
+hr.rule {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 0 0 var(--s-12);
+}
+
+/* ============================================================
+ * Section headings
+ * ============================================================ */
+
+h2 {
+  font-family: var(--sans);
+  font-size: var(--t-h2);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: var(--s-16) 0 var(--s-4);
+  color: var(--ink);
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+}
+
+h2::before {
+  content: attr(data-num);
+  font-family: var(--mono);
+  font-size: var(--t-meta);
+  font-weight: 500;
+  color: var(--ink-4);
+  letter-spacing: 0.04em;
+}
+
+h3 {
+  font-family: var(--sans);
+  font-size: var(--t-h3);
+  font-weight: 600;
+  margin: var(--s-8) 0 var(--s-2);
+  color: var(--ink);
+}
+
+p { margin: var(--s-3) 0; }
+
+ul, ol { margin: var(--s-3) 0; padding-left: 1.5rem; }
+li { margin: var(--s-2) 0; }
+li::marker { color: var(--ink-4); }
+
+strong { font-weight: 600; color: var(--ink); }
+
+a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+  transition: text-decoration-thickness 120ms;
+}
+a:hover { text-decoration-thickness: 2px; }
+
+/* ============================================================
+ * Code
+ * ============================================================ */
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: var(--tint);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  color: var(--ink);
+  font-feature-settings: "calt" 0;
+}
+
+pre {
+  font-family: var(--mono);
+  font-size: var(--t-small);
+  line-height: 1.55;
+  background: var(--tint);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: var(--s-4) var(--s-6);
+  overflow-x: auto;
+  margin: var(--s-4) 0;
+}
+pre code { background: none; padding: 0; font-size: inherit; border-radius: 0; }
+
+/* ============================================================
+ * Decision callout — serif emphasis
+ * ============================================================ */
+
+.decision {
+  font-family: var(--serif);
+  font-size: 1.1875rem;
+  line-height: 1.55;
+  margin: var(--s-6) 0;
+  padding: var(--s-4) 0 var(--s-4) var(--s-6);
+  border-left: 3px solid var(--accent);
+  color: var(--ink);
+}
+.decision strong {
+  font-family: var(--sans);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  display: inline-block;
+  margin-right: 0.4rem;
+}
+.decision-line + .decision-line { margin-top: var(--s-2); }
+
+/* ============================================================
+ * Comparison table
+ * ============================================================ */
+
+.table-wrap {
+  margin: var(--s-6) calc(var(--s-4) * -1);
+  overflow-x: auto;
+}
+
+table.compare {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--t-small);
+  font-variant-numeric: tabular-nums;
+}
+
+table.compare th, table.compare td {
+  padding: var(--s-3) var(--s-3);
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--rule);
+}
+
+table.compare thead th {
+  font-family: var(--mono);
+  font-size: var(--t-meta);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  border-bottom: 1px solid var(--rule-strong);
+  padding-bottom: var(--s-2);
+}
+
+table.compare tbody tr:last-child td { border-bottom: none; }
+
+table.compare td.row-label {
+  font-family: var(--mono);
+  font-size: var(--t-meta);
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding-right: var(--s-4);
+  white-space: nowrap;
+}
+
+table.compare td.pick,
+table.compare th.pick {
+  background: var(--accent-soft);
+  color: var(--ink);
+  position: relative;
+}
+table.compare th.pick { color: var(--accent); }
+table.compare tbody tr:first-child td.pick { border-top: 2px solid var(--accent); }
+table.compare tbody tr:last-child td.pick { border-bottom: 2px solid var(--accent); }
+
+/* ============================================================
+ * Consequences — three sections with colored top hairline
+ * ============================================================ */
+
+.consequences {
+  display: grid;
+  gap: var(--s-6);
+  grid-template-columns: 1fr;
+  margin: var(--s-6) 0;
+}
+@media (min-width: 760px) {
+  .consequences { grid-template-columns: repeat(3, 1fr); }
+}
+
+.conseq {
+  padding-top: var(--s-3);
+  border-top: 2px solid var(--rule);
+}
+.conseq h4 {
+  font-family: var(--mono);
+  font-size: var(--t-meta);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0 0 var(--s-3);
+}
+.conseq ul { padding-left: 1.1rem; margin: 0; }
+.conseq li { font-size: var(--t-small); line-height: 1.55; margin: var(--s-2) 0; }
+
+.conseq-ok   { border-top-color: var(--ok-bar); }
+.conseq-ok   h4 { color: var(--ok-fg); }
+.conseq-warn { border-top-color: var(--warn-bar); }
+.conseq-warn h4 { color: var(--warn-fg); }
+.conseq-bad  { border-top-color: var(--bad-bar); }
+.conseq-bad  h4 { color: var(--bad-fg); }
+
+/* ============================================================
+ * Collapsibles
+ * ============================================================ */
+
+details {
+  border-top: 1px solid var(--rule);
+  padding: var(--s-3) 0;
+  margin: 0;
+}
+details:last-of-type { border-bottom: 1px solid var(--rule); }
+details > summary {
+  cursor: pointer;
+  font-family: var(--sans);
+  font-weight: 500;
+  color: var(--ink);
+  list-style: none;
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+}
+details > summary::-webkit-details-marker { display: none; }
+details > summary::before {
+  content: "+";
+  font-family: var(--mono);
+  color: var(--ink-3);
+  width: 1ch;
+  display: inline-block;
+  transition: transform 150ms;
+}
+details[open] > summary::before { content: "−"; }
+details > div, details > p { margin: var(--s-3) 0 0 calc(1ch + var(--s-2)); color: var(--ink-2); }
+
+/* ============================================================
+ * Footer
+ * ============================================================ */
+
+footer.colophon {
+  margin-top: var(--s-16);
+  padding-top: var(--s-6);
+  border-top: 1px solid var(--rule);
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  letter-spacing: 0.04em;
+  color: var(--ink-4);
+}
+footer.colophon a { color: var(--ink-3); }
+
+/* ============================================================
+ * Print
+ * ============================================================ */
+
+@media print {
+  :root {
+    --paper: white;
+    --paper-elev: white;
+    --ink: black;
+    --ink-2: #333;
+    --ink-3: #555;
+    --rule: #ccc;
+  }
+  main { padding: 0; max-width: none; }
+  details[open] > div, details[open] > p { display: block !important; }
+  details > summary::before { content: ""; }
+  .table-wrap, .conseq, details { break-inside: avoid; }
+  a { color: black; text-decoration: underline; }
+}
