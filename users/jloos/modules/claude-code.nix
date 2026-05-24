@@ -73,19 +73,15 @@ in
 
     ## Shell
 
-    User runs **fish shell**. All terminal commands provided to the user must be fish-compatible (no bash-only syntax like `<<<`, `$()` subshells, `export FOO=bar`, etc.). Use fish equivalents: `set`, `string`, pipes with `psub`, etc.
+    **IMPORTANT**: I run **fish shell**. All terminal commands must be fish-compatible — no bash-isms like `<<<`, `$()` subshells, or `export FOO=bar`. Use fish equivalents: `set`, `string`, pipes with `psub`.
 
     ## Devenv
 
-    When asked to create a devenv environment for a project, use `devenv init` to initialize the environment.
+    To scaffold a devenv environment, run `devenv init`.
 
-    ## Engineering Process
+    ## Trunk
 
-    - Small, independently deployable steps with fast feedback.
-    - Empirical over speculative — trust tests, plans, and deploys over guesses.
-    - `main` is always releasable. Never break the trunk.
-    - Separate deployability from release: deploy continuously, ship features when ready.
-    - High cohesion, loose coupling, clear boundaries.
+    `main` is always releasable. Never commit broken code to it.
 
     ## Execution Discipline
 
@@ -120,11 +116,13 @@ in
 
     ## Reports and Reviews
 
-    For complex reviews/audits/analyses (security, PR, codebase, deep-dives, comparison matrices) — offer a single self-contained HTML file (inline CSS/SVG, no external assets, opens standalone in a browser).
+    For complex reviews/audits/analyses (security, PR, codebase, deep-dives, comparison matrices), offer a single self-contained HTML file.
 
-    Treat it as work product: real typography and hierarchy, coherent color, color-coded severity. Use interactivity (collapsible sections, filterable tables, tabs, hover details) only when it aids navigation — no novelty animations. Add charts/diagrams (SVG, flowcharts, sequence, comparison plots) when a picture genuinely beats prose.
-
-    HTML is a deliberate choice when richer presentation aids comprehension — not a default for short answers.
+    - Inline everything: CSS, SVG, no external assets. Opens standalone in a browser.
+    - Treat it as work product: real typography, hierarchy, coherent color, color-coded severity.
+    - Use interactivity (collapsible sections, filterable tables, tabs, hover details) only when it aids navigation. No novelty animations.
+    - Add charts/diagrams when a picture genuinely beats prose.
+    - Not a default for short answers — choose HTML when richer presentation earns its weight.
 
     ## Developer Profile
 
