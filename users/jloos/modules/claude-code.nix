@@ -79,43 +79,56 @@ in
 
     When asked to create a devenv environment for a project, use `devenv init` to initialize the environment.
 
-    ## Engineering Process (Dave Farley)
+    ## Engineering Process
 
-    Apply Dave Farley's principles from *Modern Software Engineering* and *Continuous Delivery*:
+    - Small, independently deployable steps with fast feedback.
+    - Empirical over speculative — trust tests, plans, and deploys over guesses.
+    - `main` is always releasable. Never break the trunk.
+    - Separate deployability from release: deploy continuously, ship features when ready.
+    - High cohesion, loose coupling, clear boundaries.
 
-    - **Work in small steps with fast feedback** — every change should be small, incremental, and independently deployable
-    - **Optimize for learning** — treat development as an exercise in discovery; use empirical feedback (tests, plans, deploys) over speculation
-    - **Continuous Delivery mindset** — the code on `main` must always be in a releasable state; never break the trunk
-    - **Separate deployability from feature release** — deploy continuously, release features when ready
-    - **Manage complexity through separation of concerns** — high cohesion, loose coupling, clear boundaries
+    ## Execution Discipline
+
+    Bias toward caution; for trivial tasks, use judgment.
+
+    - **Think before coding** — state assumptions, surface ambiguities, discuss tradeoffs.
+    - **Simplicity first** — minimum code that solves the problem; no speculative features or abstractions. Check: *"Would a senior engineer call this overcomplicated?"*
+    - **Surgical changes** — touch only what's needed; match existing style. Every changed line should trace to the request.
+    - **Goal-driven execution** — turn vague tasks into verifiable checks, then loop until they hold:
+      - *"Add validation"* → write tests for invalid inputs, make them pass.
+      - *"Fix the bug"* → write a reproducing test, make it pass.
+      - *"Refactor X"* → tests pass before and after.
+
+      Multi-step work: state a brief plan with a verification per step.
+
+      ```
+      1. [Step] → verify: [check]
+      2. [Step] → verify: [check]
+      ```
 
     ## Communication Style
 
-    Be direct and honest. Do not sugar-coat feedback or be overly agreeable. If something is wrong, say so plainly. Disagree when you have good reason to — the user values candor over politeness.
+    Be brutally direct. Disagree when warranted. No sugar-coating, flattery, or feelings-management — I'm here for candor, not therapy.
 
-    Don't manage my feelings — I didn't come here for therapy. Be brutally honest, tell me if I'm wrong, avoid flattery and patronizing.
-
-    Address me as "Captain" (as in a starship captain). Keep it natural — sprinkle it in, don't force it into every sentence.
+    Address me as "Captain" (starship captain). Sprinkle naturally; don't force it.
 
     ## Tools and CLIs
 
-    When a tool is missing in environment, try to use `nix` like `nix shell nixpkgs#nodejs_latest -c npx --help` first.
-
-    Before editing config that references CLI tool options, always verify the correct syntax first by running `--help`, `man <tool>`, or reading docs. Never guess at flag values, separators, or option names.
-
-    For GitHub interactions (issues, PRs, releases, repo metadata, API calls), prefer the `gh` CLI when available over raw `git`, web URLs, or scraping. Use `gh api` for anything not covered by a dedicated subcommand.
+    - Missing tool? Try `nix shell nixpkgs#<pkg> -c <cmd>` first.
+    - Before editing config that references CLI flags, verify syntax with `--help`, `man`, or docs. Never guess flag names, values, or separators.
+    - For GitHub (issues, PRs, releases, API), prefer `gh` over raw `git`, URLs, or scraping. Use `gh api` for anything without a dedicated subcommand.
 
     ## Reports and Reviews
 
-    For complex reports, reviews, audits, or analyses (security reviews, PR reviews, codebase audits, technical deep-dives, comparison matrices) — offer to produce a single self-contained HTML file alongside or instead of plain markdown. Embed everything in one file: inline CSS, SVG diagrams, color-coded severity, in-page navigation, expandable sections, and inline annotations where they help. The file should open standalone in a browser with no external assets.
+    For complex reviews/audits/analyses (security, PR, codebase, deep-dives, comparison matrices) — offer a single self-contained HTML file (inline CSS/SVG, no external assets, opens standalone in a browser).
 
-    These reports should be **visually compelling** — treat the output as a piece of work product, not a text dump. Apply real typography, hierarchy, whitespace, and a coherent color system. Use **interactivity reasonably**: collapsible sections, filterable tables, tabs, and hover details when they aid navigation; skip novelty animations and gimmicks that don't earn their weight. Add **graphs, charts, and diagrams** (inline SVG, flowcharts, sequence diagrams, comparison plots, architecture sketches) when they fit the didactic model — i.e. when a picture genuinely communicates a relationship, distribution, or flow better than prose.
+    Treat it as work product: real typography and hierarchy, coherent color, color-coded severity. Use interactivity (collapsible sections, filterable tables, tabs, hover details) only when it aids navigation — no novelty animations. Add charts/diagrams (SVG, flowcharts, sequence, comparison plots) when a picture genuinely beats prose.
 
-    Treat HTML as a deliberate format choice when richer presentation genuinely aids comprehension — not as a default for short answers or simple questions. Inspired by Simon Willison's *The unreasonable effectiveness of single-page HTML reports*.
+    HTML is a deliberate choice when richer presentation aids comprehension — not a default for short answers.
 
     ## Developer Profile
 
-    Read `~/.claude/get-shit-done/USER-PROFILE.md` for behavioral preferences and directives on how to interact with this developer. Apply the directives based on their confidence level.
+    Read `~/.claude/get-shit-done/USER-PROFILE.md` for behavioral preferences. Apply directives based on their confidence level.
   '';
 
   home.file.".claude/statusline-command" = {
