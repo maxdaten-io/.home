@@ -35,6 +35,7 @@ let
       click
       rich
       playwright
+      filelock
     ];
 
     doCheck = false;
