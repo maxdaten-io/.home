@@ -78,12 +78,19 @@ _update-and-commit-npm name:
     set -euo pipefail
     nix_file="users/jloos/modules/{{name}}.nix"
     lock_file="users/jloos/modules/{{name}}/package-lock.json"
-    # Extract version scoped to the right pname block
+    # Extract version scoped to the right pname block.
+    # Also matches `<name>Version = "…"` let-bindings (e.g. claudeCodeVersion)
+    # since some packages stash the version above the pname anchor.
     extract_version() {
         awk -v anchor='pname = "{{name}}"' '
+            /[a-zA-Z]+Version = "/ {
+                line = $0; sub(/.*Version = "/, "", line); sub(/".*/, "", line)
+                last_let_version = line
+            }
             index($0, anchor) { found=1 }
             found && /version = "/ { gsub(/.*version = "/, ""); gsub(/".*/, ""); print; exit }
-        ' "$1"
+            END { if (!found || last_let_version != "") print last_let_version }
+        ' "$1" | head -1
     }
     old_version=$(extract_version "$nix_file")
     ./scripts/update-{{name}}.sh latest

@@ -72,8 +72,10 @@ post_update_hook() {
 
   # Only summarize the newest version — the user has already glanced past
   # the older sections by the time they read the highlights at the prompt.
+  # Use a here-string instead of `echo | awk` so awk's early `exit` doesn't
+  # SIGPIPE the upstream writer (which, with pipefail, would kill the script).
   local newest_section
-  newest_section=$(echo "$changelog" | awk -v target="$NEW_VERSION" '
+  newest_section=$(awk -v target="$NEW_VERSION" '
     /^## / {
       v = $2
       gsub(/^v/, "", v)
@@ -81,7 +83,7 @@ post_update_hook() {
       else if (printing) { exit }
     }
     printing { print }
-  ')
+  ' <<<"$changelog")
 
   if [ -z "$newest_section" ]; then
     return 0
@@ -89,9 +91,14 @@ post_update_hook() {
 
   printf "\n## Highlights (%s)\n\n" "$NEW_VERSION"
   local prompt="Summarize the most interesting and impactful changes from this claude-code release as 5-8 short bullets. Focus on new features, behavior changes, and renamed/breaking items — skip routine bug fixes unless they fix something widely impactful. Output only the bullets, no preamble or trailing commentary."
-  printf "%s" "$newest_section" | claude -p "$prompt" 2>/dev/null || {
+  # Run in a subshell with pipefail disabled so SIGPIPE / claude -p hiccups
+  # can't escape and abort the cosmetic highlights step.
+  (
+    set +o pipefail
+    printf "%s" "$newest_section" | claude -p "$prompt" 2>/dev/null
+  ) ||
     warn "claude -p failed — skipping highlights"
-  }
+  return 0
 }
 
 # ---------------------------------------------------------------------------
@@ -189,6 +196,16 @@ _fix_native_hashes() {
 # ---------------------------------------------------------------------------
 # shellcheck disable=SC1091 source=lib/update-npm-package.sh
 source "$SCRIPT_DIR/lib/update-npm-package.sh"
+
+# Pre-read OLD_VERSION from `claudeCodeVersion = "..."` — the library's
+# generic detector looks for `version = "` (case-sensitive) and misses ours.
+# Exporting it before the library runs lets the "already at version" short-
+# circuit work and gives post_update_hook a usable previous version for the
+# changelog window.
+OLD_VERSION=$(awk '/claudeCodeVersion = "/{
+  gsub(/.*claudeCodeVersion = "/, ""); gsub(/".*/, ""); print; exit
+}' "$NIX_FILE")
+export OLD_VERSION
 
 # The library correctly handles: lockfile generation, npmDepsHash.
 # It does NOT correctly handle version or any of the hash fields — see above.

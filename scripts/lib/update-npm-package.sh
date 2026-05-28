@@ -182,14 +182,18 @@ update_npm_package() {
   esac
 
   # --- read current version from nix file ---
-  if [[ -n ${PACKAGE_ANCHOR:-} ]]; then
-    OLD_VERSION=$(awk -v anchor="$PACKAGE_ANCHOR" '
-      index($0, anchor) { found=1 }
-      found && /version = "/ { gsub(/.*version = "/, ""); gsub(/".*/, ""); print; exit }
-    ' "$NIX_FILE")
-  else
-    OLD_VERSION=$(grep 'version = "' "$NIX_FILE" | head -1 |
-      sed 's/.*version = "\([^"]*\)".*/\1/')
+  # Honor a pre-set OLD_VERSION (callers may know a better way to find it,
+  # e.g. when the version lives in a let-binding rather than `version = "…"`).
+  if [[ -z ${OLD_VERSION:-} ]]; then
+    if [[ -n ${PACKAGE_ANCHOR:-} ]]; then
+      OLD_VERSION=$(awk -v anchor="$PACKAGE_ANCHOR" '
+        index($0, anchor) { found=1 }
+        found && /version = "/ { gsub(/.*version = "/, ""); gsub(/".*/, ""); print; exit }
+      ' "$NIX_FILE")
+    else
+      OLD_VERSION=$(grep 'version = "' "$NIX_FILE" | head -1 |
+        sed 's/.*version = "\([^"]*\)".*/\1/')
+    fi
   fi
   NEW_VERSION="$version"
   export OLD_VERSION NEW_VERSION
