@@ -70,32 +70,16 @@ post_update_hook() {
     return 0
   fi
 
-  # Only summarize the newest version — the user has already glanced past
-  # the older sections by the time they read the highlights at the prompt.
-  # Use a here-string instead of `echo | awk` so awk's early `exit` doesn't
-  # SIGPIPE the upstream writer (which, with pipefail, would kill the script).
-  local newest_section
-  newest_section=$(awk -v target="$NEW_VERSION" '
-    /^## / {
-      v = $2
-      gsub(/^v/, "", v)
-      if (v == target) { printing = 1; print; next }
-      else if (printing) { exit }
-    }
-    printing { print }
-  ' <<<"$changelog")
-
-  if [ -z "$newest_section" ]; then
-    return 0
-  fi
-
-  printf "\n## Highlights (%s)\n\n" "$NEW_VERSION"
-  local prompt="Summarize the most interesting and impactful changes from this claude-code release as 5-8 short bullets. Focus on new features, behavior changes, and renamed/breaking items — skip routine bug fixes unless they fix something widely impactful. Output only the bullets, no preamble or trailing commentary."
+  # Feed claude the full OLD→NEW version range (the same `sections` printed
+  # above) so the highlights cover every bump when an update spans several
+  # releases — not just the newest one.
+  printf "\n## Highlights (%s → %s)\n\n" "$OLD_VERSION" "$NEW_VERSION"
+  local prompt="Summarize the most interesting and impactful changes across these claude-code releases as 5-8 short bullets. Focus on new features, behavior changes, and renamed/breaking items — skip routine bug fixes unless they fix something widely impactful. Output only the bullets, no preamble or trailing commentary."
   # Run in a subshell with pipefail disabled so SIGPIPE / claude -p hiccups
   # can't escape and abort the cosmetic highlights step.
   (
     set +o pipefail
-    printf "%s" "$newest_section" | claude -p "$prompt" 2>/dev/null
+    printf "%s" "$sections" | claude -p "$prompt" --model haiku --tools "" 2>/dev/null
   ) ||
     warn "claude -p failed — skipping highlights"
   return 0
