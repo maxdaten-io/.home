@@ -25,7 +25,9 @@
 
     onActivation = {
       autoUpdate = true;
-      cleanup = "zap";
+      # "none" so undeclared casks / Mac App Store apps are never auto-removed.
+      # "zap" previously uninstalled+wiped every MAS app not listed in masApps.
+      cleanup = "none";
       upgrade = true;
     };
 
