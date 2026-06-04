@@ -16,13 +16,13 @@ let
 
   notebooklm = pkgs.python312Packages.buildPythonApplication rec {
     pname = "notebooklm-py";
-    version = "0.5.0";
+    version = "0.6.0";
     pyproject = true;
 
     src = pkgs.fetchPypi {
       pname = "notebooklm_py";
       inherit version;
-      hash = "sha256-5L3YLzzV9m5Q1cMuUzPQTDXAB1qK30ANq6lFmyEer8o=";
+      hash = "sha256-yTfRPOORxyAhmg8Nqb8Dnfce4A2ziaR1GnIL7iyuPew=";
     };
 
     build-system = with pkgs.python312Packages; [
