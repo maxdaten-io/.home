@@ -3,6 +3,9 @@
   programs.zoxide = {
     enable = true;
     enableFishIntegration = true;
+    # Disable zsh integration: only consumed by Claude Code's zsh snapshot shell,
+    # where the missing chpwd hook triggers zoxide's doctor warning on every `cd`.
+    enableZshIntegration = false;
     options = [
       "--cmd"
       "cd"
