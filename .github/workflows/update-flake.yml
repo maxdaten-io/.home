@@ -23,24 +23,30 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
 
-      - name: Update devenv
-        run: nix run nixpkgs#devenv -- update
+      - name: Install devenv
+        run: nix profile install nixpkgs#devenv
 
-      - name: Update flake lock
-        run: nix flake update
+      - name: Update all dependencies
+        run: devenv shell just update
+
+      - name: Format
+        run: devenv shell just fmt
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
         with:
-          commit-message: "chore: Update flake lock and devenv"
-          title: "chore: Update flake inputs"
+          commit-message: "chore: Update all dependencies"
+          title: "chore: Update all dependencies"
           branch: update-flake-lock
           labels: dependencies,automated
           draft: always-true
           body: |
-            Automated update of flake inputs and devenv.
+            Automated update of all dependencies via `just update`.
 
             - Updated devenv
             - Updated flake.lock
+            - Updated claude-code (npm)
+            - Updated playwright-cli (npm)
+            - Formatted with treefmt
 
             **Note:** This PR is created as a draft. Click "Ready for review" to trigger CI checks.
