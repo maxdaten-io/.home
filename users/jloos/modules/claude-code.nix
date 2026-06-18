@@ -113,6 +113,13 @@ in
     - Before editing config that references CLI flags, verify syntax with `--help`, `man`, or docs. Never guess flag names, values, or separators.
     - For GitHub (issues, PRs, releases, API), prefer `gh` over raw `git`, URLs, or scraping. Use `gh api` for anything without a dedicated subcommand.
 
+    ## cmux
+
+    `cmux` (macOS terminal/workspace app at `/Applications/cmux.app`, CLI wrapped via Home Manager) drives the *running* app over a Unix socket — the app must be open. Inside a cmux terminal `CMUX_WORKSPACE_ID`/`CMUX_SURFACE_ID` are auto-set so commands target the current workspace/surface; from any other terminal pass `--workspace`/`--surface`/`--pane`. Full surface: `cmux --help`; topic docs: `cmux docs <browser|agents|...>`.
+
+    - **Browser automation** — Playwright-style control of a *visible* browser split (good for interactive scraping/checks with eyes on the page; for headless/CI use the `playwright` setup instead): `cmux browser open <url>`, `browser snapshot [-i]`, `browser click|type|fill <selector> [text]`, `browser get <text|html|url|value> …`, `browser eval <js>`, `browser wait --selector <css>`, `browser screenshot --out <path>`.
+    - **Pane/terminal control** — tmux-style: `cmux send <text>` then `cmux send-key Enter` to drive another pane, `cmux read-screen [--lines <n>]` / `cmux capture-pane` to read its output, `cmux new-split <left|right|up|down>` / `cmux new-pane [--type terminal|browser]` to create panes, `cmux list-panes` / `cmux tree` to inspect.
+
     ## Reports and Reviews
 
     For complex reviews/audits/analyses (security, PR, codebase, deep-dives, comparison matrices), offer a single self-contained HTML file.
