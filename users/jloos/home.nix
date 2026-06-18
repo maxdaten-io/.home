@@ -70,6 +70,7 @@ in
     ./modules/claude-code.nix
     ./modules/playwright-cli.nix
     ./modules/apfel.nix
+    ./modules/cmux.nix
     ./modules/indie-consultant.nix
   ];
 
