@@ -141,11 +141,23 @@ generate_lockfile() {
   # shellcheck disable=SC2064
   trap "rm -rf '$tmpdir'" EXIT
 
+  # Seed a minimal package.json so npm treats the tmpdir as the project root.
+  # Without it, npm walks UP the tree looking for the nearest ancestor with a
+  # package.json/node_modules and operates THERE instead — e.g. a stray
+  # /private/tmp/package.json silently captures the install, reporting "up to
+  # date" while writing no lockfile into the tmpdir. The fixed name also keeps
+  # the generated lockfile's root "name" deterministic across runs.
+  cat >"$tmpdir/package.json" <<'EOF'
+{ "name": "lockfile-gen", "version": "0.0.0", "private": true }
+EOF
+
   pushd "$tmpdir" >/dev/null
   npm install "${pkg}@${version}" --package-lock-only 2>/dev/null ||
     die "npm install --package-lock-only failed for ${pkg}@${version}"
   popd >/dev/null
 
+  [[ -f "$tmpdir/package-lock.json" ]] ||
+    die "npm did not produce a package-lock.json in ${tmpdir}"
   cp "$tmpdir/package-lock.json" "$dest"
 }
 
