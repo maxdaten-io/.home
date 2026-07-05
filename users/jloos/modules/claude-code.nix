@@ -74,7 +74,17 @@ in
 
     ## Shell
 
-    **IMPORTANT**: I run **fish shell**. All terminal commands must be fish-compatible — no bash-isms like `<<<`, `$()` subshells, or `export FOO=bar`. Use fish equivalents: `set`, `string`, pipes with `psub`.
+    **IMPORTANT — two shells, don't mix them up:**
+
+    - **Your Bash tool runs bash** (pinned via `CLAUDE_CODE_SHELL`), NOT fish.
+      Write plain bash in tool calls — never fish syntax (`end`, `and`/`or`,
+      `set -x FOO val`, `string`, `psub`). Coreutils on PATH are usually GNU
+      (nix) even on macOS — use GNU flags (`sed -i` without a suffix arg,
+      `date -d`; not BSD `sed -i '''` / `date -v`).
+    - **My interactive shell is fish.** Only commands you suggest for ME to run
+      (e.g. `! <cmd>` snippets, docs, README instructions) must be
+      fish-compatible — no `<<<`, `$()` subshells, or `export FOO=bar` there;
+      use `set`, `string`, pipes with `psub`.
 
     ## Devenv
 
@@ -144,7 +154,7 @@ in
     notebooklm
     (
       let
-        claudeCodeVersion = "2.1.197";
+        claudeCodeVersion = "2.1.201";
 
         # Since 2.1.114 the npm package is a stub (`bin/claude.exe`) that a
         # postinstall script replaces with a platform-specific native binary
@@ -156,19 +166,19 @@ in
         nativePlatforms = {
           "aarch64-darwin" = {
             suffix = "darwin-arm64";
-            hash = "sha512-1FOVhJzkKGWgOEEsvaK3ylCEmjKeJiXwfKl7RtNEbiDj7OxhRQ1G1CLN0HGDTTq1QwY+Dm2x1Yscdv5NfobAxQ==";
+            hash = "sha512-XCvnGO2PwNkR5K6LHC4r7jJwOLLNsypzfTwJFvWaV3D0VdhdCcrXT5TtdVL+fiLn+wNWHzKs1ztpzcXHI/uh8A==";
           };
           "x86_64-darwin" = {
             suffix = "darwin-x64";
-            hash = "sha512-DOPeGTQqJWVENJsxwMxJtLOx+7OBINEDg9trQldlJR1nBssaYzNj1WWxp37JYSBRjeYLhqLipvDqEA0LMglL7A==";
+            hash = "sha512-q+FKESkjK32ddgVtnm0n7OmbvmjrrSF5KllzvKpZ+U61FSn4kvxertSNdmO12nXRzLyf3KsDVN5bL7052BtScg==";
           };
           "aarch64-linux" = {
             suffix = "linux-arm64";
-            hash = "sha512-sx6SoGj3MNR5CV+YDkNtbLHXa1tn3G8qcYFgm1gnvOi9ODQUKbhiPfankJfkTMDVekOvnKJhm6i9hGFIPzp7cQ==";
+            hash = "sha512-3/5r/T5+zb8oxhkoO6nGNfaSpmRxCKfDxMx1oIEXVUhjXhqGCP1DAp+DgL5o76HaJgerL9euBKxSNuDiDAfrjg==";
           };
           "x86_64-linux" = {
             suffix = "linux-x64";
-            hash = "sha512-rIlKmrY0QMyHgPRX/MYWNj039vbypICvI9jVe3rs9Xy2RnNklySjyPxqh62QadznzoftEO23uYQ1tFePcQ//bg==";
+            hash = "sha512-pJaih99BHjY2WvBoPYvDMFhs90DwTXUaC8LIqQe/W+2g4jJr7VYMTVv0C60vIoxg17nxaMUTtlBhY87U3qP5kA==";
           };
         };
 
@@ -187,10 +197,10 @@ in
 
         src = pkgs.fetchurl {
           url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${finalAttrs.version}.tgz";
-          hash = "sha256-BIHecp7ylqYikfJiJ/dtR3QVNqT9gQlyN0SNd2m4MZk=";
+          hash = "sha256-fxR4YtwaV5Gq62scczY0LhyBJAmfC+KFKrBYZ/VPKII=";
         };
 
-        npmDepsHash = "sha256-cJVTFoskXilH6p2Rd9nxO+NVJy/M/yzsEUUusAf0EpY=";
+        npmDepsHash = "sha256-poPg/gIC1FCmzm0NG0rVYwULrTBmoCKsA0+7X9NWGro=";
 
         strictDeps = true;
 
@@ -224,6 +234,7 @@ in
             --set DISABLE_AUTOUPDATER 1 \
             --set DISABLE_INSTALLATION_CHECKS 1 \
             --set ENABLE_CLAUDEAI_MCP_SERVERS false \
+            --set-default CLAUDE_CODE_SHELL "${pkgs.bash}/bin/bash" \
             --run 'export GITHUB_PERSONAL_ACCESS_TOKEN=$(security find-generic-password -s "github-pat" -w 2>/dev/null)' \
             --prefix PATH : "${
               pkgs.lib.makeBinPath (
