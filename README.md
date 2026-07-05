@@ -156,7 +156,7 @@ jloos@macos$ sudo cat /var/root/.ssh/id_ed25519.pub
 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIPxyE0ilAv126v5gVToRTiH8dha0wquEvI3ZMZpPNvK root@macos
 ```
 
-Add public key to pi4-nixos roots authorizedKeys in [nixos/modules/system.nix](nixos/modules/system.nix).
+Add public key to the pi roots authorizedKeys in [modules/hosts/pi/base.nix](modules/hosts/pi/base.nix).
 
 ```nix
 users.extraUsers.root.openssh.authorizedKeys.keys = [

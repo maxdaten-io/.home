@@ -84,21 +84,29 @@ just sops-list-secrets
 
 ## Architecture
 
+The repo follows the [dendritic pattern](https://github.com/mightyiam/dendritic):
+every `.nix` file under `modules/` is a flake-parts module, auto-imported via
+[import-tree](https://github.com/vic/import-tree) (paths with a `_` component are
+skipped). Files contribute config to named buckets under
+`flake.modules.<class>.<name>` (classes: `nixos`, `darwin`, `homeManager`), and
+host wiring files assemble those buckets into `darwinConfigurations` /
+`nixosConfigurations`. Flake inputs reach inner modules by lexical capture from
+the outer flake-parts module — no `specialArgs`.
+
 ### Directory Structure
 
-- `flake.nix` - Main flake configuration with all inputs and outputs
-- `hosts/` - Host-specific configurations
-  - `macos/` - macOS/Darwin configuration
-  - `pi/` - Raspberry Pi NixOS configuration
-- `users/jloos/` - User-specific Home Manager configuration
-- `nixos/modules/` - Reusable NixOS modules
-- `darwin/modules/` - Reusable Darwin modules
+- `flake.nix` - Inputs only; outputs are `mkFlake { inherit inputs; } (import-tree ./modules)`
+- `modules/flake/` - Flake-level plumbing (systems, perSystem pkgs, `flake.modules` option, checks)
+- `modules/home/` - Home Manager aspects (`flake.modules.homeManager.<aspect>`); `base.nix` is the roll-up all hosts import, `gui.nix` only hosts with a display
+- `modules/users/jloos.nix` - User account + home-manager wiring for both nixos and darwin classes
+- `modules/hosts/macbook-pro/` - macOS host (`flake.modules.darwin."hosts/macbook-pro"` + `darwinConfigurations` wiring in `configuration.nix`)
+- `modules/hosts/pi/` - Raspberry Pi host (`flake.modules.nixos."hosts/pi"`, shared `raspberry-pi` board aspect, `nixosConfigurations` wiring in `configurations.nix`, sd-image/flash apps in `apps.nix`)
 
 ### Key Configuration Files
 
-- `hosts/macos/configuration.nix` - Main macOS system configuration
-- `users/jloos/home.nix` - Home Manager user environment
-- `hosts/pi/configuration.nix` - Raspberry Pi system configuration
+- `modules/hosts/macbook-pro/system.nix` - Main macOS system configuration
+- `modules/home/base.nix` - Home Manager user environment (packages + aspect roll-up)
+- `modules/hosts/pi/base.nix` - Raspberry Pi system configuration
 - `justfile` - Common commands and tasks
 
 ### Flake Inputs

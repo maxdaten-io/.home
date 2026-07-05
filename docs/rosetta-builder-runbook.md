@@ -72,8 +72,8 @@ With `nix.enable = false`, nix-darwin cannot use `nix.buildMachines` or `nix.ext
 |------|------|
 | `flake.nix` | `nix-rosetta-builder` input with `inputs.nixpkgs.follows = "nixpkgs"` (fixes upstream stale lock) |
 | `hosts/default.nix` | Wires `nix-rosetta-builder.darwinModules.default` into darwin config |
-| `hosts/macos/configuration.nix` | `builders-use-substitutes = true` in `nix.custom.conf` |
-| `nixos/modules/build-machines.nix` | `nix-rosetta-builder` config + manual `/etc/nix/machines` entry |
+| `modules/hosts/macbook-pro/system.nix` | `builders-use-substitutes = true` in `nix.custom.conf` |
+| `modules/hosts/macbook-pro/rosetta-builder.nix` | `nix-rosetta-builder` config + manual `/etc/nix/machines` entry |
 
 ## Verification
 
