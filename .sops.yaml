@@ -15,7 +15,7 @@ creation_rules:
           - *jloos-macos
           - *pi
           - *jloos-pi
-  - path_regex: hosts/macos/secrets\.yaml$
+  - path_regex: modules/hosts/macbook-pro/secrets\.yaml$
     key_groups:
       - age:
           - *jloos-macos-old

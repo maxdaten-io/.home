@@ -63,7 +63,7 @@ update-notebooklm version="":
 _update-and-commit-pypi name:
     #!/usr/bin/env bash
     set -euo pipefail
-    nix_file="users/jloos/modules/claude-code.nix"
+    nix_file="modules/home/claude-code.nix"
     old_version=$(awk '/pname = "notebooklm-py"/{found=1} found && /version = "/{gsub(/.*version = "/,""); gsub(/".*/,""); print; exit}' "$nix_file")
     ./scripts/update-{{name}}.sh latest
     new_version=$(awk '/pname = "notebooklm-py"/{found=1} found && /version = "/{gsub(/.*version = "/,""); gsub(/".*/,""); print; exit}' "$nix_file")
@@ -76,8 +76,8 @@ _update-and-commit-pypi name:
 _update-and-commit-npm name:
     #!/usr/bin/env bash
     set -euo pipefail
-    nix_file="users/jloos/modules/{{name}}.nix"
-    lock_file="users/jloos/modules/{{name}}/package-lock.json"
+    nix_file="modules/home/{{name}}.nix"
+    lock_file="modules/home/{{name}}/package-lock.json"
     # Extract version scoped to the right pname block.
     # Also matches `<name>Version = "…"` let-bindings (e.g. claudeCodeVersion)
     # since some packages stash the version above the pname anchor.

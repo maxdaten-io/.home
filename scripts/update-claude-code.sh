@@ -8,8 +8,8 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # Package configuration
 # ---------------------------------------------------------------------------
 export NPM_PACKAGE="@anthropic-ai/claude-code"
-export NIX_FILE="$REPO_ROOT/users/jloos/modules/claude-code.nix"
-export LOCK_FILE="$REPO_ROOT/users/jloos/modules/claude-code/package-lock.json"
+export NIX_FILE="$REPO_ROOT/modules/home/claude-code.nix"
+export LOCK_FILE="$REPO_ROOT/modules/home/claude-code/package-lock.json"
 export PACKAGE_DISPLAY_NAME="claude-code"
 export PACKAGE_ANCHOR='pname = "claude-code"'
 

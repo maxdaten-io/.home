@@ -28,6 +28,10 @@
 
     flake-parts.url = "github:hercules-ci/flake-parts";
 
+    # Every file under ./modules is a flake-parts module (dendritic pattern,
+    # https://github.com/mightyiam/dendritic)
+    import-tree.url = "github:vic/import-tree";
+
     # Raspberry Pi
     raspberry-pi-nix = {
       url = "github:nix-community/raspberry-pi-nix/v0.4.0";
@@ -82,45 +86,5 @@
     ];
   };
 
-  outputs =
-    {
-      nixpkgs,
-      flake-parts,
-      ...
-    }@inputs:
-    flake-parts.lib.mkFlake { inherit inputs; } (
-      { ... }:
-      {
-        imports = [
-          ./hosts
-        ];
-
-        systems = [
-          "x86_64-linux"
-          "aarch64-linux"
-          "aarch64-darwin"
-          "x86_64-darwin"
-        ];
-
-        perSystem =
-          {
-            system,
-            ...
-          }:
-          let
-            pkgs = import nixpkgs {
-              inherit system;
-              config.allowUnfree = true;
-            };
-          in
-          {
-            _module.args.pkgs = pkgs;
-
-            checks.statusline = import ./checks/statusline.nix {
-              inherit pkgs;
-              lib = pkgs.lib;
-            };
-          };
-      }
-    );
+  outputs = inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules);
 }

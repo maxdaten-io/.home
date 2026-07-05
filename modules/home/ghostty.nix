@@ -1,0 +1,61 @@
+{
+  flake.modules.homeManager.ghostty =
+    {
+      config,
+      ...
+    }:
+    {
+
+      xdg.configFile."ghostty/config".text = ''
+        # Theme & Appearance
+        theme = atelier-cave
+        background-blur = true
+
+        working-directory = ${config.home.homeDirectory}/Developer
+        split-inherit-working-directory = true
+        tab-inherit-working-directory = false
+        window-inherit-working-directory = false
+
+        split-divider-color = #955ae7
+        unfocused-split-opacity = 0.8
+        cursor-click-to-move = true
+        keybind = opt+backspace=text:\x17
+
+        font-size = 15
+
+        # Notify when long-running commands finish in unfocused terminals
+        notify-on-command-finish = unfocused
+        notify-on-command-finish-after = 10s
+      '';
+
+      # theme
+      xdg.configFile."ghostty/themes/atelier-cave".text = ''
+        background = 19171c
+        foreground = 8b8792
+
+        cursor-color = 8b8792
+
+        palette = 0=#19171c
+        palette = 1=#be4678
+        palette = 2=#2a9292
+        palette = 3=#a06e3b
+        palette = 4=#576ddb
+        palette = 5=#955ae7
+        palette = 6=#398bc6
+        palette = 7=#8b8792
+
+        palette = 8=#655f6d
+        palette = 9=#aa573c
+        palette = 10=#2a9292
+        palette = 11=#a06e3b
+        palette = 12=#576ddb
+        palette = 13=#bf40bf
+        palette = 14=#398bc6
+        palette = 15=#efecf4
+
+        cursor-style = block
+        cursor-style-blink = false
+        selection-invert-fg-bg = true
+      '';
+    };
+}

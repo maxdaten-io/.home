@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-NIX_FILE="$REPO_ROOT/users/jloos/modules/claude-code.nix"
+NIX_FILE="$REPO_ROOT/modules/home/claude-code.nix"
 PYPI_PACKAGE="notebooklm-py"
 PACKAGE_DISPLAY_NAME="notebooklm"
 
