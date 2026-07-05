@@ -8,8 +8,10 @@
       enable = true;
       enableFishIntegration = true;
       # Alt-C
-      changeDirWidgetCommand = "${fd} --type d --hidden --follow --exclude .git --no-ignore";
-      changeDirWidgetOptions = [ "--preview 'tree -C {} | head -200'" ];
+      changeDirWidget = {
+        command = "${fd} --type d --hidden --follow --exclude .git --no-ignore";
+        options = [ "--preview 'tree -C {} | head -200'" ];
+      };
     };
 
   programs.fish.interactiveShellInit = ''
