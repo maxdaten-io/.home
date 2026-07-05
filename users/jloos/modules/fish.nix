@@ -46,6 +46,11 @@ in
         tp = "terraform plan";
         ta = "terraform apply";
         tay = "terraform apply --yes";
+
+        # kubens/kubectx open an fzf picker when run with no argument
+        kn = "kubens";
+        kx = "kubectx";
+
         lg = "lazygit";
         # Handy for nix shells with deep folder structures
         cdr = "cd $DEVENV_ROOT";
@@ -112,6 +117,69 @@ in
 
       if test -n "$selected"
           cd $selected
+      end
+    '';
+
+    # fj — pick and run a just recipe (preview shows the recipe body)
+    functions.fj = ''
+      set -l recipe (just --summary 2>/dev/null | tr ' ' '\n' | fzf --reverse --border \
+          --prompt 'just ❯ ' \
+          --preview 'just --show {1}' \
+          --preview-window 'right:60%:wrap')
+      test -z "$recipe"; and return
+      echo "just $recipe"
+      just $recipe
+    '';
+
+    # frec — pick a Flux kustomization, then act on it
+    #   enter: reconcile │ ctrl-s: suspend │ ctrl-r: resume
+    functions.frec = ''
+      set -l out ( \
+        flux get kustomizations -A 2>/dev/null | fzf --reverse --border \
+            --header-lines=1 \
+            --header 'enter: reconcile │ ctrl-s: suspend │ ctrl-r: resume' \
+            --expect=enter,ctrl-s,ctrl-r \
+            --preview 'flux get kustomization {2} -n {1}' \
+            --preview-window 'down:45%:wrap' \
+      )
+      test -z "$out"; and return
+      set -l key $out[1]
+      set -l ns (echo $out[2] | awk '{print $1}')
+      set -l name (echo $out[2] | awk '{print $2}')
+      test -z "$name"; and return
+      switch $key
+          case ctrl-s
+              flux suspend kustomization $name -n $ns
+          case ctrl-r
+              flux resume kustomization $name -n $ns
+          case '*'
+              flux reconcile kustomization $name -n $ns
+      end
+    '';
+
+    # frg — interactive ripgrep; open the chosen match in $EDITOR at its line
+    functions.frg = ''
+      set -l rg 'rg --column --line-number --no-heading --color=always --smart-case'
+      set -l picked ( \
+        fzf --ansi --disabled --reverse --border \
+            --prompt 'rg ❯ ' \
+            --bind "start:reload:$rg {q} || true" \
+            --bind "change:reload:$rg {q} || true" \
+            --delimiter ':' \
+            --preview 'bat --style=numbers --color=always --highlight-line {2} {1}' \
+            --preview-window 'right:60%:+{2}+3/3' \
+      )
+      test -z "$picked"; and return
+      set -l parts (string split ':' -- $picked)
+      set -l file $parts[1]
+      set -l line $parts[2]
+      set -l col $parts[3]
+      set -l ed (string split ' ' -- $EDITOR)
+      switch (basename $ed[1])
+          case vim nvim vi
+              command $ed[1] +$line "$file"
+          case '*'
+              command $ed[1] "$file:$line:$col"
       end
     '';
 
