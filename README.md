@@ -186,7 +186,6 @@ nix build .#packages.aarch64-linux.default --system 'aarch64-linux' --max-jobs 0
   - [x] Grafana
   - [x] Prometheus
   - [x] Provision Dashboard via nix
-- [x] Network printing
 - [x] Home-Bridge
   - <https://github.com/SquircleSpace/nixos-configuration/tree/master/homebridge>
   - [x] Pin package
