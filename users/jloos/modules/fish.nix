@@ -104,7 +104,7 @@ in
         n = split(path, parts, "/")
         name = parts[n]
         printf "%s\t%s %s\n", path, name, $3
-      }' | fzf --height=80% --reverse --border \
+      }' | fzf --reverse --border \
           --with-nth=2.. \
           --preview 'fish -c "__gwt_preview {1}"' \
           --preview-window=right:60%:wrap \
