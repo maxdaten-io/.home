@@ -142,18 +142,21 @@
 
         ## Claude Accounts
 
-        Two Claude Code accounts are isolated via `CLAUDE_CONFIG_DIR` (a fish wrapper
-        function on `claude`): plain `claude` = private account (`~/.claude`); anything
-        under `~/Developer/frontrow/` = Front Row work account (`~/.claude-frontrow`).
-        Force an account with `env CLAUDE_CONFIG_DIR=$HOME/.claude claude`.
+        Two Claude Code accounts are isolated via `CLAUDE_CONFIG_DIR`, selected by
+        the wrapped `claude` binary itself (works from any shell, cmux, GUI): plain
+        `claude` = private account (`~/.claude`); launched with a CWD under
+        `~/Developer/frontrow/` = Front Row work account (`~/.claude-frontrow`).
+        A pre-set `CLAUDE_CONFIG_DIR` always wins:
+        `env CLAUDE_CONFIG_DIR=$HOME/.claude claude` forces private.
 
         ## Developer Profile
 
         Read `~/.claude/get-shit-done/USER-PROFILE.md` for behavioral preferences. Apply directives based on their confidence level.
       '';
 
-      # One entry set per Claude account config dir (CLAUDE_CONFIG_DIR); the fish
-      # `claude` wrapper (fish.nix) selects ~/.claude-frontrow under ~/Developer/frontrow.
+      # One entry set per Claude account config dir (CLAUDE_CONFIG_DIR); the claude
+      # binary wrapper below selects ~/.claude-frontrow when launched under
+      # ~/Developer/frontrow.
       claudeUserFiles = dir: {
         "${dir}/CLAUDE.md".text = claudeMd;
         "${dir}/statusline-command" = {
@@ -251,6 +254,7 @@
                 --set ENABLE_CLAUDEAI_MCP_SERVERS false \
                 --set-default CLAUDE_CODE_SHELL "${pkgs.bash}/bin/bash" \
                 --run 'export GITHUB_PERSONAL_ACCESS_TOKEN=$(security find-generic-password -s "github-pat" -w 2>/dev/null)' \
+                --run 'if [ -z "''${CLAUDE_CONFIG_DIR:-}" ]; then case "$PWD/" in "$HOME/Developer/frontrow/"*) export CLAUDE_CONFIG_DIR="$HOME/.claude-frontrow" ;; esac; fi' \
                 --prefix PATH : "${
                   pkgs.lib.makeBinPath (
                     [

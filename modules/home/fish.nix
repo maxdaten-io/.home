@@ -89,21 +89,6 @@
 
         functions.fish_reload = "source ~/.config/fish/config.fish";
 
-        # Auto-select the Claude Code account by directory: work account under
-        # ~/Developer/frontrow (CLAUDE_CONFIG_DIR=~/.claude-frontrow), private account
-        # (~/.claude, the default) everywhere else. A pre-set CLAUDE_CONFIG_DIR
-        # always wins: `env CLAUDE_CONFIG_DIR=$HOME/.claude claude` forces private.
-        functions.claude = {
-          wraps = "claude";
-          description = "claude with per-directory account (work: ~/Developer/frontrow)";
-          body = ''
-            if not set -q CLAUDE_CONFIG_DIR; and string match -q "$HOME/Developer/frontrow/*" $PWD/
-                set -fx CLAUDE_CONFIG_DIR $HOME/.claude-frontrow
-            end
-            command claude $argv
-          '';
-        };
-
         functions.__gwt_preview = ''
           set -l p $argv[1]
           set -l home_rel (string replace -r "^$HOME" "~" $p)
