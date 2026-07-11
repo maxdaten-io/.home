@@ -3,10 +3,21 @@
 
   inputs = {
     # Nix Derivations
-    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
+    #
+    # TEMPORARY PIN: nixpkgs-unstable evals ≥ 2026-07-08 ship a cctools ld that
+    # crashes (Trace/BPT trap: 5) on every aarch64-darwin link — terminal-notifier,
+    # starship, and anything else not in cache fails to build. Reproduced on Hydra:
+    # https://hydra.nixos.org/build/337061993. Pinned to the last-good rev (2026-07-02,
+    # the pre-update lock state). Restore the rolling URL once fixed upstream:
+    # nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
+    nixpkgs.url = "github:NixOS/nixpkgs/65179426c83bb3f6bc14898b42ea1c6f01d374b0";
 
     darwin = {
-      url = "https://flakehub.com/f/nix-darwin/nix-darwin/0.1";
+      # TEMPORARY PIN (see nixpkgs above): newer nix-darwin needs a newer
+      # nixos-render-docs (--sidebar-depth) than the pinned nixpkgs provides.
+      # Restore together with nixpkgs:
+      # url = "https://flakehub.com/f/nix-darwin/nix-darwin/0.1";
+      url = "github:nix-darwin/nix-darwin/a1fa429e945becaf60468600daf649be4ba0350c";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     # Install Homebrew
