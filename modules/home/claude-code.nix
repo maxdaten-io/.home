@@ -67,9 +67,7 @@
             --prefix PATH : "${pkgs.git}/bin"
         '';
       };
-    in
-    {
-      home.file.".claude/CLAUDE.md".text = ''
+      claudeMd = ''
         # User Instructions
 
         > This file is managed by Home Manager. Edit `~/Developer/.home/modules/home/claude-code.nix` and run `home-manager switch --flake '.#jloos-macos'` to apply changes.
@@ -142,15 +140,30 @@
         - Add charts/diagrams when a picture genuinely beats prose.
         - Not a default for short answers — choose HTML when richer presentation earns its weight.
 
+        ## Claude Accounts
+
+        Two Claude Code accounts are isolated via `CLAUDE_CONFIG_DIR` (a fish wrapper
+        function on `claude`): plain `claude` = private account (`~/.claude`); anything
+        under `~/Developer/frontrow/` = Front Row work account (`~/.claude-work`).
+        Force an account with `env CLAUDE_CONFIG_DIR=$HOME/.claude claude`.
+
         ## Developer Profile
 
         Read `~/.claude/get-shit-done/USER-PROFILE.md` for behavioral preferences. Apply directives based on their confidence level.
       '';
 
-      home.file.".claude/statusline-command" = {
-        source = "${claude-statusline}/bin/claude-statusline";
-        executable = true;
+      # One entry set per Claude account config dir (CLAUDE_CONFIG_DIR); the fish
+      # `claude` wrapper (fish.nix) selects ~/.claude-work under ~/Developer/frontrow.
+      claudeUserFiles = dir: {
+        "${dir}/CLAUDE.md".text = claudeMd;
+        "${dir}/statusline-command" = {
+          source = "${claude-statusline}/bin/claude-statusline";
+          executable = true;
+        };
       };
+    in
+    {
+      home.file = claudeUserFiles ".claude" // claudeUserFiles ".claude-work";
 
       home.packages = with pkgs; [
         notebooklm
