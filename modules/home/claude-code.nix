@@ -144,7 +144,7 @@
 
         Two Claude Code accounts are isolated via `CLAUDE_CONFIG_DIR` (a fish wrapper
         function on `claude`): plain `claude` = private account (`~/.claude`); anything
-        under `~/Developer/frontrow/` = Front Row work account (`~/.claude-work`).
+        under `~/Developer/frontrow/` = Front Row work account (`~/.claude-frontrow`).
         Force an account with `env CLAUDE_CONFIG_DIR=$HOME/.claude claude`.
 
         ## Developer Profile
@@ -153,7 +153,7 @@
       '';
 
       # One entry set per Claude account config dir (CLAUDE_CONFIG_DIR); the fish
-      # `claude` wrapper (fish.nix) selects ~/.claude-work under ~/Developer/frontrow.
+      # `claude` wrapper (fish.nix) selects ~/.claude-frontrow under ~/Developer/frontrow.
       claudeUserFiles = dir: {
         "${dir}/CLAUDE.md".text = claudeMd;
         "${dir}/statusline-command" = {
@@ -163,7 +163,7 @@
       };
     in
     {
-      home.file = claudeUserFiles ".claude" // claudeUserFiles ".claude-work";
+      home.file = claudeUserFiles ".claude" // claudeUserFiles ".claude-frontrow";
 
       home.packages = with pkgs; [
         notebooklm
