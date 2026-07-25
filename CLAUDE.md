@@ -16,9 +16,11 @@ is not a pattern to imitate.)
 nix eval .#darwinConfigurations."Jan-Philips-MacBook-Pro".config.system.build.toplevel.drvPath
 ```
 
-**Known pre-existing CI red:** `Check Flake` fails with `attribute 'buildDTBs' missing` — raspberry-pi-nix v0.4.0 against current nixpkgs. This predates
-current work, so judge a change by whether it adds *new* failures.
-`Check Formatting` must stay green.
+**CI is green — keep it that way.** Both `Check Flake` and `Check Formatting`
+pass as of 2026-07-25; there is no longer a known-red baseline to excuse a
+failure against. Note `Check Flake` evaluates all four systems but only
+*builds* the checks the runner can build — `--all-systems` without
+`--no-build` tries to build darwin checks on Linux and always fails.
 
 ## Architecture
 
