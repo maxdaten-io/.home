@@ -21,8 +21,15 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
 
+      # --no-build: `checks.statusline` is defined for all four systems in
+      # modules/flake/systems.nix, so building every system's checks always hits
+      # a platform mismatch on whichever runner we use. Evaluate all systems
+      # here, then build the checks this runner can actually build.
       - name: Check flake
-        run: nix flake check --all-systems --show-trace
+        run: nix flake check --all-systems --no-build --show-trace
+
+      - name: Run checks buildable on this runner
+        run: nix build .#checks.x86_64-linux.statusline -L
 
   check-formatting:
     name: Check Formatting
