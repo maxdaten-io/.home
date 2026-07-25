@@ -12,6 +12,21 @@ This is a personal NixOS/Darwin configuration repository managed with Nix Flakes
 - Secret management via sops-nix
 - Development environment setup
 
+## Git Workflow
+
+**No pull requests in this repo.** It is a single-maintainer personal config
+repo — commit directly to `main` and push. Do not create branches or PRs for
+routine changes, and do not ask whether to open one.
+
+`main` must still stay releasable: verify before pushing (at minimum
+`nix eval .#darwinConfigurations."Jan-Philips-MacBook-Pro".config.system.build.toplevel.drvPath`
+for Darwin changes) and never push a change you have not evaluated.
+
+Known pre-existing red: CI's `Check Flake` job fails on `attribute 'buildDTBs' missing` from the Raspberry Pi `device-tree.nix` eval (raspberry-pi-nix vs.
+current nixpkgs). This predates current work — treat `Check Flake` as red
+until the Pi input is fixed, and judge changes by whether they add *new*
+failures. `Check Formatting` must stay green.
+
 ## Key Commands
 
 ### Building and Switching Configurations
