@@ -66,7 +66,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    devenv.url = "github:cachix/devenv/v2.1.2";
+    devenv.url = "github:cachix/devenv/main";
 
     # Code formatting
     treefmt-nix.url = "github:numtide/treefmt-nix";
