@@ -44,8 +44,15 @@
     import-tree.url = "github:vic/import-tree";
 
     # Raspberry Pi
+    #
+    # Tracks master rather than a release tag: the newest tag (v0.4.1, 2024-11)
+    # still calls the `lib.cartesianProductOfSets` that nixpkgs renamed to
+    # `cartesianProduct` in 2024-04, so its overlay only evaluates against its
+    # own vendored nixpkgs. Master fixed that rename, which is what lets us set
+    # `raspberry-pi-nix.pin-inputs.enable = false` in
+    # modules/hosts/pi/raspberry-pi.nix and build the kernel from our nixpkgs.
     raspberry-pi-nix = {
-      url = "github:nix-community/raspberry-pi-nix/v0.4.0";
+      url = "github:nix-community/raspberry-pi-nix";
     };
 
     # System Tools

@@ -3,13 +3,26 @@
 { inputs, ... }:
 {
   flake.modules.nixos.raspberry-pi = {
-    imports = [ inputs.raspberry-pi-nix.nixosModules.raspberry-pi ];
+    # `sd-image` carries the root filesystem and the `sdImage.*` options that
+    # modules/hosts/pi/apps.nix builds on. raspberry-pi-nix bundled it into
+    # `raspberry-pi` until it was split out after v0.4.0.
+    imports = [
+      inputs.raspberry-pi-nix.nixosModules.raspberry-pi
+      inputs.raspberry-pi-nix.nixosModules.sd-image
+    ];
 
     system.stateVersion = "24.11";
     nixpkgs.hostPlatform.system = "aarch64-linux";
 
     raspberry-pi-nix.board = "bcm2712";
     raspberry-pi-nix.libcamera-overlay.enable = false;
+
+    # Build the kernel against our own nixpkgs instead of the one
+    # raspberry-pi-nix vendors. Pinned, its kernels come from nixpkgs 24.11 and
+    # their passthru lacks `buildDTBs` and `target`, which the NixOS modules in
+    # current nixpkgs read to default `hardware.deviceTree.enable` and
+    # `system.boot.loader.kernelFile`. Costs the upstream cachix kernel cache.
+    raspberry-pi-nix.pin-inputs.enable = false;
 
     hardware = {
       raspberry-pi.config = {
