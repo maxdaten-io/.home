@@ -175,6 +175,14 @@ pkgs.runCommand "statusline-test"
   }
   ''
     export HOME=$(mktemp -d)
+    ${lib.optionalString pkgs.stdenv.isLinux ''
+      # GHC derives its handle encoding from the locale, and Nix build sandboxes
+      # set none, so on Linux claude-statusline dies with `recoverEncode: invalid
+      # argument` the moment it writes a Nerd Font glyph to starship. Darwin's
+      # GHC defaults to UTF-8, so this is only needed here.
+      export LC_ALL=C.UTF-8
+      export LANG=C.UTF-8
+    ''}
     export STARSHIP_CONFIG="${testStarshipConfig}"
     export STARSHIP_BIN="${starshipBin}"
     export BATS_LIB_PATH="${pkgs.bats.libraries.bats-support}/share/bats:${pkgs.bats.libraries.bats-assert}/share/bats"
