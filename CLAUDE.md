@@ -10,6 +10,22 @@ directly to `main` and push. Don't create branches or ask whether to open a PR.
 (`.github/workflows/update-flake.yml` opens automated dependency PRs; that bot
 is not a pattern to imitate.)
 
+**No worktrees or branches in agent mode.** Background sessions (`/bg`,
+`claude --bg`, agent view) otherwise move themselves into a
+`.claude/worktrees/<name>` worktree on a `worktree-*` branch before their first
+edit. Turned off here with `worktree.bgIsolation = "none"`, which sits in
+`.claude/settings.local.json` because devenv's `claude.code` module owns
+`.claude/settings.json` (a nix-store symlink) and exposes no passthrough for
+arbitrary settings keys. `.claude/` is gitignored, so a fresh clone needs it
+re-added:
+
+```json
+{ "worktree": { "bgIsolation": "none" } }
+```
+
+Work in the checkout you are given and commit to `main`. Reach for
+`EnterWorktree` only when I ask for a worktree.
+
 `main` must stay releasable. Evaluate a Darwin change before pushing it:
 
 ```bash
