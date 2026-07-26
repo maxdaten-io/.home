@@ -148,10 +148,6 @@
         `~/Developer/frontrow/` = Front Row work account (`~/.claude-frontrow`).
         A pre-set `CLAUDE_CONFIG_DIR` always wins:
         `env CLAUDE_CONFIG_DIR=$HOME/.claude claude` forces private.
-
-        ## Developer Profile
-
-        Read `~/.claude/get-shit-done/USER-PROFILE.md` for behavioral preferences. Apply directives based on their confidence level.
       '';
 
       # One entry set per Claude account config dir (CLAUDE_CONFIG_DIR); the claude
