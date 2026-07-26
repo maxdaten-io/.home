@@ -70,75 +70,65 @@
       claudeMd = ''
         # User Instructions
 
-        > This file is managed by Home Manager. Edit `~/Developer/.home/modules/home/claude-code.nix` and run `home-manager switch --flake '.#jloos-macos'` to apply changes.
+        > Managed by Home Manager. Edit `~/Developer/.home/modules/home/claude-code.nix`,
+        > then apply with `just switch` in that repo. There is no `homeConfigurations`
+        > output — Home Manager is a nix-darwin module here, so `home-manager switch` fails.
 
-        ## Shell
+        ## Shell — there are two, don't mix them
 
-        **IMPORTANT — two shells, don't mix them up:**
+        - **Your Bash tool runs bash** (pinned via `CLAUDE_CODE_SHELL`), not fish. Never emit
+          fish syntax (`end`, `and`/`or`, `set -x FOO val`, `string`, `psub`) in tool calls.
+          Coreutils on PATH are GNU (nix) even on macOS — use GNU flags (`sed -i` with no
+          suffix arg, `date -d`; not BSD `sed -i '''` / `date -v`).
+        - **My interactive shell is fish.** Only commands you hand *me* to run (`! <cmd>`
+          snippets, docs, READMEs) need fish syntax — no `<<<`, `$()` subshells, or
+          `export FOO=bar`; use `set`, `string`, `psub`.
 
-        - **Your Bash tool runs bash** (pinned via `CLAUDE_CODE_SHELL`), NOT fish.
-          Write plain bash in tool calls — never fish syntax (`end`, `and`/`or`,
-          `set -x FOO val`, `string`, `psub`). Coreutils on PATH are usually GNU
-          (nix) even on macOS — use GNU flags (`sed -i` without a suffix arg,
-          `date -d`; not BSD `sed -i '''` / `date -v`).
-        - **My interactive shell is fish.** Only commands you suggest for ME to run
-          (e.g. `! <cmd>` snippets, docs, README instructions) must be
-          fish-compatible — no `<<<`, `$()` subshells, or `export FOO=bar` there;
-          use `set`, `string`, pipes with `psub`.
+        ## Working Style
 
-        ## Devenv
-
-        To scaffold a devenv environment, run `devenv init`.
-
-        ## Trunk
-
-        `main` is always releasable. Never commit broken code to it.
-
-        ## Execution Discipline
-
-        Bias toward caution; for trivial tasks, use judgment.
-
-        - **Think before coding** — state assumptions, surface ambiguities, discuss tradeoffs.
-        - **Simplicity first** — minimum code that solves the problem; no speculative features or abstractions. Check: *"Would a senior engineer call this overcomplicated?"*
-        - **Surgical changes** — touch only what's needed; match existing style. Every changed line should trace to the request.
-        - **Goal-driven execution** — turn vague tasks into verifiable checks, then loop until they hold:
-          - *"Add validation"* → write tests for invalid inputs, make them pass.
-          - *"Fix the bug"* → write a reproducing test, make it pass.
-          - *"Refactor X"* → tests pass before and after.
-
-          Multi-step work: state a brief plan with a verification per step.
-
-          ```
-          1. [Step] → verify: [check]
-          2. [Step] → verify: [check]
-          ```
-
-        ## Communication Style
-
-        Be brutally direct. Disagree when warranted. No sugar-coating, flattery, or feelings-management — I'm here for candor, not therapy.
+        - Be brutally direct. Disagree when warranted. No sugar-coating, flattery, or
+          feelings-management — I'm here for candor, not therapy.
+        - Smallest change that solves the problem. Touch only what the request implies, match
+          surrounding style, skip speculative abstractions.
+        - Turn a vague ask into a check that can fail, then make it pass — "fix the bug" means
+          a reproducing test first. For multi-step work, state the plan with a verification per
+          step.
+        - `main` is always releasable. Never commit broken code to it.
 
         ## Tools and CLIs
 
-        - Missing tool? Try `nix shell nixpkgs#<pkg> -c <cmd>` first.
-        - Before editing config that references CLI flags, verify syntax with `--help`, `man`, or docs. Never guess flag names, values, or separators.
-        - For GitHub (issues, PRs, releases, API), prefer `gh` over raw `git`, URLs, or scraping. Use `gh api` for anything without a dedicated subcommand.
+        - Missing tool? `nix shell nixpkgs#<pkg> -c <cmd>`.
+        - Never guess CLI flags, values, or separators — confirm with `--help`, `man`, or docs
+          before writing them into config.
+        - GitHub work goes through `gh` (`gh api` when there's no subcommand), not raw URLs or
+          scraping.
+        - `devenv` is the project-environment tool here; `devenv init` scaffolds one.
 
         ## cmux
 
-        `cmux` (macOS terminal/workspace app at `/Applications/cmux.app`, CLI wrapped via Home Manager) drives the *running* app over a Unix socket — the app must be open. Inside a cmux terminal `CMUX_WORKSPACE_ID`/`CMUX_SURFACE_ID` are auto-set so commands target the current workspace/surface; from any other terminal pass `--workspace`/`--surface`/`--pane`. Full surface: `cmux --help`; topic docs: `cmux docs <browser|agents|...>`.
+        `cmux` (macOS terminal/workspace app at `/Applications/cmux.app`, CLI wrapped via Home
+        Manager) drives the *running* app over a Unix socket — the app must be open. Inside a
+        cmux terminal `CMUX_WORKSPACE_ID`/`CMUX_SURFACE_ID` auto-target the current
+        workspace/surface; from any other terminal pass `--workspace`/`--surface`/`--pane`.
 
-        - **Browser automation** — Playwright-style control of a *visible* browser split (good for interactive scraping/checks with eyes on the page; for headless/CI use the `playwright` setup instead): `cmux browser open <url>`, `browser snapshot [-i]`, `browser click|type|fill <selector> [text]`, `browser get <text|html|url|value> …`, `browser eval <js>`, `browser wait --selector <css>`, `browser screenshot --out <path>`.
-        - **Pane/terminal control** — tmux-style: `cmux send <text>` then `cmux send-key Enter` to drive another pane, `cmux read-screen [--lines <n>]` / `cmux capture-pane` to read its output, `cmux new-split <left|right|up|down>` / `cmux new-pane [--type terminal|browser]` to create panes, `cmux list-panes` / `cmux tree` to inspect.
+        The CLI self-documents for agents — read `cmux --help` and
+        `cmux docs <settings|browser|agents|dock|...>` instead of guessing flags. Two
+        capabilities worth knowing exist:
+
+        - **Browser automation** in a *visible* split — `cmux browser open <url>`, then
+          `snapshot -i`, `click`/`fill`/`eval`/`wait`. Reach for it when eyes on the page help;
+          for headless/CI use `playwright-cli`.
+        - **Pane control**, tmux-style — `cmux send` + `send-key` to drive another pane,
+          `read-screen` to read it back, `list-panes`/`tree` to inspect, `new-split`/`new-pane`
+          to create.
 
         ## Reports and Reviews
 
-        For complex reviews/audits/analyses (security, PR, codebase, deep-dives, comparison matrices), offer a single self-contained HTML file.
-
-        - Inline everything: CSS, SVG, no external assets. Opens standalone in a browser.
-        - Treat it as work product: real typography, hierarchy, coherent color, color-coded severity.
-        - Use interactivity (collapsible sections, filterable tables, tabs, hover details) only when it aids navigation. No novelty animations.
-        - Add charts/diagrams when a picture genuinely beats prose.
-        - Not a default for short answers — choose HTML when richer presentation earns its weight.
+        For substantial reviews/audits/analyses (security, PR, codebase, comparison matrices),
+        offer a single self-contained HTML file — CSS and SVG inlined, no external assets, opens
+        standalone. Treat it as work product: real hierarchy, color-coded severity, charts where
+        a picture beats prose. Interactivity only where it aids navigation, no novelty
+        animations. Not for short answers.
 
         ## Claude Accounts
 
