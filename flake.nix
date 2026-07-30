@@ -66,7 +66,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    devenv.url = "github:cachix/devenv/main";
+    # Provides the devenv CLI installed in modules/hosts/macbook-pro/system.nix.
+    # Pinned to a release tag rather than `main` so the installed version is a
+    # real release, not whatever mid-cycle commit the last `just update` caught.
+    # Bump deliberately: https://github.com/cachix/devenv/releases
+    devenv.url = "github:cachix/devenv/v2.2";
 
     # Code formatting
     treefmt-nix.url = "github:numtide/treefmt-nix";
