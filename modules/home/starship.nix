@@ -90,13 +90,12 @@
               $git_status
               [${pl.arrow}](fg:color_aqua bg:color_blue)
               [$all](fg:color_aqua bg:color_blue)
-              [${pl.arrow}](fg:color_blue bg:color_bg3)
+              [${pl.arrow}](fg:color_blue bg:color_bg1)
               $docker_context
               $kubernetes
               $aws
               $gcloud
               $azure
-              [${pl.arrow}](fg:color_bg3 bg:color_bg1)
               $memory_usage
               $cmd_duration
               [${pl.rcap} ](fg:color_bg1)
@@ -166,12 +165,25 @@
             };
 
             # Cloud View
+            #
+            # Shares the color_bg1 background with the System View below, so any
+            # of these can vanish without leaving an orphaned chevron behind —
+            # every arrow in `format` is unconditional, so a segment with its
+            # own background can only disappear by stranding one. Cloud modules
+            # read bright (color_fg0), system modules dim (color_text_dim);
+            # that is the zone boundary now, not a background change.
+            #
+            # kubernetes and gcloud appear only when a project-local scope is
+            # armed (see gcloud-scope.nix). Each gates on the same variable the
+            # tool itself reads, so a visible segment means a real target rather
+            # than a stale global default.
 
             kubernetes = {
               disabled = false;
-              format = "[[ $symbol( $context(:$namespace)) ](fg:color_fg0 bg:color_bg3)]($style)";
+              detect_env_vars = [ "KUBECONFIG" ];
+              format = "[[ $symbol( $context(:$namespace)) ](fg:color_fg0 bg:color_bg1)]($style)";
               symbol = "";
-              style = "bg:color_bg3";
+              style = "bg:color_bg1";
               contexts = [
                 {
                   context_pattern = "gke_.*_(?P<cluster>[\\w-]+)";
@@ -182,16 +194,17 @@
 
             docker_context = {
               disabled = false;
-              format = "[[ $symbol( $context) ](fg:color_fg0 bg:color_bg3)]($style)";
+              format = "[[ $symbol( $context) ](fg:color_fg0 bg:color_bg1)]($style)";
               symbol = "";
-              style = "bg:color_bg3";
+              style = "bg:color_bg1";
             };
 
             gcloud = {
               disabled = false;
-              format = "[[ $symbol( $project:$account(@$domain)((:$region)) )](fg:color_fg0 bg:color_bg3)]($style)";
+              detect_env_vars = [ "CLOUDSDK_CONFIG" ];
+              format = "[[ $symbol( $project:$account(@$domain)((:$region)) )](fg:color_fg0 bg:color_bg1)]($style)";
               symbol = "";
-              style = "bg:color_bg3";
+              style = "bg:color_bg1";
             };
 
             # System View

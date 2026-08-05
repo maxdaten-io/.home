@@ -4,6 +4,7 @@ let
   aspects = with config.flake.modules.homeManager; [
     fish
     starship
+    gcloud-scope
     git
     gh
     vim

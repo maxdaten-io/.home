@@ -37,3 +37,8 @@ Temporary Items
 
 ### Claude Code ###
 .claude/settings.local.json
+
+### Google Cloud ###
+# Project-local credential scope (see modules/home/gcloud-scope.nix).
+# Holds credentials.db and application_default_credentials.json — never commit.
+.gcloud/
