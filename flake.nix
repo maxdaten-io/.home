@@ -70,7 +70,7 @@
     # Pinned to a release tag rather than `main` so the installed version is a
     # real release, not whatever mid-cycle commit the last `just update` caught.
     # Bump deliberately: https://github.com/cachix/devenv/releases
-    devenv.url = "github:cachix/devenv/v2.2.1";
+    devenv.url = "github:cachix/devenv/v2.2.2";
 
     # Code formatting
     treefmt-nix.url = "github:numtide/treefmt-nix";
