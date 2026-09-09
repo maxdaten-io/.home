@@ -103,6 +103,8 @@
         - GitHub work goes through `gh` (`gh api` when there's no subcommand), not raw URLs or
           scraping.
         - `devenv` is the project-environment tool here; `devenv init` scaffolds one.
+        - Subagents default to Opus (`CLAUDE_CODE_SUBAGENT_MODEL=opus` in settings.json).
+          Never pass `model: "fable"` to the Agent tool unless I explicitly ask for Fable.
 
         ## cmux
 
