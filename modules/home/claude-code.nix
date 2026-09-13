@@ -246,10 +246,6 @@
     {
       home.file = claudeUserFiles ".claude" // claudeUserFiles ".claude-frontrow";
 
-      # Nix pins the archify version; its periodic update-check GET would only
-      # make the agent nag about a newer tag.
-      home.sessionVariables.ARCHIFY_UPDATE_CHECK_DISABLED = "1";
-
       home.packages = with pkgs; [
         notebooklm
         (
