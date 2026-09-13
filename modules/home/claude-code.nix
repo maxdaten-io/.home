@@ -57,6 +57,14 @@
         };
       };
 
+      # Claude Code skill: SKILL.md + Node ESM scripts, no runtime npm deps.
+      # Pinned to the release zip (1.3 MB) rather than the repo, which carries
+      # docs/GIFs. Bump: change the tag, clear the hash, re-eval.
+      archify = pkgs.fetchzip {
+        url = "https://github.com/tt-a1i/archify/releases/download/v2.16.0/archify.zip";
+        hash = "sha256-IAhAOmb4nCequTMtOIHp9bRNLTvJKy66NNBYJHGd28M=";
+      };
+
       claude-statusline = pkgs.symlinkJoin {
         name = "claude-statusline-wrapped";
         paths = [ claude-statusline-unwrapped ];
@@ -232,10 +240,15 @@
           source = "${claude-statusline}/bin/claude-statusline";
           executable = true;
         };
+        "${dir}/skills/archify".source = archify;
       };
     in
     {
       home.file = claudeUserFiles ".claude" // claudeUserFiles ".claude-frontrow";
+
+      # Nix pins the archify version; its periodic update-check GET would only
+      # make the agent nag about a newer tag.
+      home.sessionVariables.ARCHIFY_UPDATE_CHECK_DISABLED = "1";
 
       home.packages = with pkgs; [
         notebooklm
