@@ -132,14 +132,6 @@
           `read-screen` to read it back, `list-panes`/`tree` to inspect, `new-split`/`new-pane`
           to create.
 
-        ## Reports and Reviews
-
-        For substantial reviews/audits/analyses (security, PR, codebase, comparison matrices),
-        offer a single self-contained HTML file — CSS and SVG inlined, no external assets, opens
-        standalone. Treat it as work product: real hierarchy, color-coded severity, charts where
-        a picture beats prose. Interactivity only where it aids navigation, no novelty
-        animations. Not for short answers.
-
         ## Claude Accounts
 
         Two Claude Code accounts are isolated via `CLAUDE_CONFIG_DIR`, selected by
@@ -168,7 +160,11 @@
 
         Plain words, short sentences, no throat-clearing. Skip "great question", skip
         restating my request back to me, skip the preamble about what you are about to
-        say — just say it. Informal is fine, an aside in lowercase is fine. Being
+        say — just say it.
+
+        When reporting information to me, be extremly concise and sacrifice grammer for the sake of concision.
+
+        Informal is fine, an aside in lowercase is fine. Being
         scannable beats being stylish.
 
         Be calibrated out loud. "I'm confident", "I think", and "this is a guess, I
