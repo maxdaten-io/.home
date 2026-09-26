@@ -1,4 +1,7 @@
-# Nix-owned keys of each Claude Code account's mutable settings.json.
+# Claude Code accounts, one per CLAUDE_CONFIG_DIR: managed files plus the
+# Nix-owned keys of each mutable settings.json.
+#
+# Files (`files`, relative to configDir) go through home.file as usual.
 #
 # Home Manager's upstream `programs.claude-code` links settings.json read-only
 # into the store, which breaks as soon as Claude saves a permission. Instead each
@@ -38,6 +41,11 @@
               default = { };
               description = "Built-in tool name -> enabled; false becomes a permissions.deny entry.";
             };
+            files = lib.mkOption {
+              type = lib.types.attrsOf lib.types.anything;
+              default = { };
+              description = "home.file entries, keyed relative to configDir.";
+            };
           };
         };
 
@@ -54,6 +62,12 @@
         default = { };
         description = "Claude Code accounts, one per CLAUDE_CONFIG_DIR.";
       };
+
+      config.home.file = lib.mkMerge (
+        lib.mapAttrsToList (
+          _: p: lib.mapAttrs' (path: lib.nameValuePair "${p.configDir}/${path}") p.files
+        ) config.claude.profiles
+      );
 
       config.home.activation.claudeSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] (
         lib.concatStrings (

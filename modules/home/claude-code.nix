@@ -1,11 +1,6 @@
 {
   flake.modules.homeManager.claude-code =
-    {
-      config,
-      lib,
-      pkgs,
-      ...
-    }:
+    { pkgs, ... }:
     let
       claude-statusline-unwrapped = pkgs.writers.writeHaskellBin "claude-statusline" {
         libraries = [
@@ -231,17 +226,15 @@
         worth attacking.
       '';
 
-      # One entry set per Claude account config dir (CLAUDE_CONFIG_DIR); the claude
-      # binary wrapper below selects ~/.claude-frontrow when launched under
-      # ~/Developer/frontrow.
-      claudeUserFiles = dir: {
-        "${dir}/CLAUDE.md".text = claudeMd;
-        "${dir}/output-styles/karpathy.md".text = karpathyOutputStyle;
-        "${dir}/statusline-command" = {
+      # home.file entries, relative to each profile's configDir.
+      claudeUserFiles = {
+        "CLAUDE.md".text = claudeMd;
+        "output-styles/karpathy.md".text = karpathyOutputStyle;
+        "statusline-command" = {
           source = "${claude-statusline}/bin/claude-statusline";
           executable = true;
         };
-        "${dir}/skills/archify".source = archify;
+        "skills/archify".source = archify;
       };
 
       # Trims the system prompt sent on every request — recipe:
@@ -316,8 +309,9 @@
     in
     {
       # One Claude account per CLAUDE_CONFIG_DIR; the binary wrapper below picks
-      # frontrow under ~/Developer/frontrow. settings/tools are merged into each
-      # mutable settings.json by ./claude-code-settings.nix. Per-profile override:
+      # frontrow under ~/Developer/frontrow. ./claude-code-settings.nix installs
+      # `files` and merges settings/tools into each mutable settings.json.
+      # Per-profile override:
       # `settings = claudeSettings // { enableArtifact = false; };`.
       claude.profiles = {
         private = {
@@ -326,6 +320,7 @@
             disableRemoteControl = false;
           };
           tools = claudeTools;
+          files = claudeUserFiles;
         };
         frontrow = {
           configDir = ".claude-frontrow";
@@ -335,12 +330,9 @@
           tools = claudeTools // {
             DesignSync = true;
           };
+          files = claudeUserFiles;
         };
       };
-
-      home.file = lib.mkMerge (
-        lib.mapAttrsToList (_: p: claudeUserFiles p.configDir) config.claude.profiles
-      );
 
       home.packages = with pkgs; [
         notebooklm
@@ -425,7 +417,6 @@
               wrapProgram $out/bin/claude \
                 --set DISABLE_AUTOUPDATER 1 \
                 --set DISABLE_INSTALLATION_CHECKS 1 \
-                --set ENABLE_CLAUDEAI_MCP_SERVERS false \
                 --set-default CLAUDE_CODE_SHELL "${pkgs.bash}/bin/bash" \
                 --run 'export GITHUB_PERSONAL_ACCESS_TOKEN=$(security find-generic-password -s "github-pat" -w 2>/dev/null)' \
                 --run 'if [ -z "''${CLAUDE_CONFIG_DIR:-}" ]; then case "$PWD/" in "$HOME/Developer/frontrow/"*) export CLAUDE_CONFIG_DIR="$HOME/.claude-frontrow" ;; esac; fi' \
