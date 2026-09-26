@@ -1,6 +1,6 @@
 {
   flake.modules.homeManager.claude-code =
-    { pkgs, lib, ... }:
+    { pkgs, ... }:
     let
       claude-statusline-unwrapped = pkgs.writers.writeHaskellBin "claude-statusline" {
         libraries = [
@@ -238,61 +238,16 @@
         };
         "${dir}/skills/archify".source = archify;
       };
-
-      # Trims the system prompt Claude Code sends on every request. Recipe:
-      # https://aihero.dev/s/D9UXCK (Matt Pocock)
-      # Measure with `/context` before and after a change.
-      #
-      # Kept on purpose: Workflow, Task*, Cron* + ScheduleWakeup (/loop, bg jobs),
-      # plan mode, AskUserQuestion, EnterWorktree, PushNotification, and
-      # ReportFindings (/code-review).
-      promptTrim = {
-        disableArtifact = true;
-        # Bundled skill descriptions leave the prompt; /loop, /code-review etc.
-        # stay typable.
-        disableBundledSkills = true;
-        disableClaudeAiConnectors = true;
-        # Bare tool names drop the schema from the payload; scoped rules
-        # ("Bash(rm *)") would only block calls.
-        permissions.deny = [
-          "DesignSync"
-          "NotebookEdit"
-          "RemoteTrigger"
-          "SendFeedback"
-        ];
-      };
-
-      # Per CLAUDE_CONFIG_DIR patch, deep-merged into the mutable settings.json on
-      # activation (jq `*`): the keys set here are owned by Nix (arrays such as
-      # permissions.deny are replaced wholesale), everything else Claude writes —
-      # permissions.allow, model, hooks — is left alone. Removing a key here does
-      # NOT remove it from the file; set it to false instead.
-      claudeSettings = {
-        ".claude" = promptTrim;
-        ".claude-frontrow" = promptTrim;
-      };
     in
     {
       home.file = claudeUserFiles ".claude" // claudeUserFiles ".claude-frontrow";
 
-      home.activation.claudeSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] (
-        lib.concatStrings (
-          lib.mapAttrsToList (dir: patch: ''
-            f="$HOME/${dir}/settings.json"
-            tmp=$(mktemp)
-            { [ -s "$f" ] && cat "$f" || echo '{}'; } \
-              | ${pkgs.jq}/bin/jq --slurpfile p ${pkgs.writeText "claude-settings-patch.json" (builtins.toJSON patch)} \
-                  '. * $p[0]' > "$tmp"
-            if cmp -s "$tmp" "$f"; then
-              rm "$tmp"
-            else
-              run mkdir -p "$HOME/${dir}"
-              chmod 644 "$tmp"
-              run mv "$tmp" "$f"
-            fi
-          '') claudeSettings
-        )
-      );
+      # settings.json keys owned by Nix: see ./claude-code-settings.nix. Override
+      # per profile, e.g. `tools.Workflow = false;` or `settings.enableArtifact = true;`.
+      claude.profiles = {
+        private.configDir = ".claude";
+        frontrow.configDir = ".claude-frontrow";
+      };
 
       home.packages = with pkgs; [
         notebooklm
