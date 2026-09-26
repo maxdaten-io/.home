@@ -328,7 +328,9 @@
         frontrow = {
           configDir = ".claude-frontrow";
           settings = claudeSettings;
-          tools = claudeTools;
+          tools = claudeTools // {
+            DesignSync = true;
+          };
         };
       };
 
