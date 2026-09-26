@@ -65,6 +65,19 @@
         hash = "sha256-IAhAOmb4nCequTMtOIHp9bRNLTvJKy66NNBYJHGd28M=";
       };
 
+      # Skills for the `spark` CLI (Spark Mail). Only `use-spark` is linked: it's
+      # the command reference every recipe/persona in the repo depends on. The
+      # `spark` binary itself is not packaged here — Spark Desktop installs it to
+      # /usr/local/bin/spark via Settings → AI Agents → Spark CLI Setup, and it
+      # only works over IPC against the running app. Bump: change the tag, clear
+      # the hash, re-eval.
+      spark-cli-skills = pkgs.fetchFromGitHub {
+        owner = "readdle";
+        repo = "spark-cli-skills";
+        rev = "1.3.1";
+        hash = "sha256-YgeRMtDoBiWad5jJ1OLaxJx238iwxOSlT3SHvL2ms0o=";
+      };
+
       claude-statusline = pkgs.symlinkJoin {
         name = "claude-statusline-wrapped";
         paths = [ claude-statusline-unwrapped ];
@@ -235,6 +248,7 @@
           executable = true;
         };
         "skills/archify".source = archify;
+        "skills/use-spark".source = "${spark-cli-skills}/skills/use-spark";
       };
 
       # Trims the system prompt sent on every request — recipe:
