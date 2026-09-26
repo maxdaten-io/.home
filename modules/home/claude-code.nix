@@ -275,7 +275,7 @@
         Artifact = true; # (L) gated by enableArtifact above
         ArtifactComments = true;
         ArtifactData = true;
-        AskUserQuestion = true; # (L)
+        AskUserQuestion = false; # (L)
         Bash = true; # (L)
         CronCreate = true; # /loop <interval>
         CronDelete = true;
@@ -322,12 +322,16 @@
       claude.profiles = {
         private = {
           configDir = ".claude";
-          settings = claudeSettings;
+          settings = claudeSettings // {
+            disableRemoteControl = false;
+          };
           tools = claudeTools;
         };
         frontrow = {
           configDir = ".claude-frontrow";
-          settings = claudeSettings;
+          settings = claudeSettings // {
+            disableClaudeAiConnectors = false;
+          };
           tools = claudeTools // {
             DesignSync = true;
           };
