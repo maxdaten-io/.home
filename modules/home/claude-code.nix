@@ -1,6 +1,11 @@
 {
   flake.modules.homeManager.claude-code =
-    { pkgs, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     let
       claude-statusline-unwrapped = pkgs.writers.writeHaskellBin "claude-statusline" {
         libraries = [
@@ -238,16 +243,98 @@
         };
         "${dir}/skills/archify".source = archify;
       };
+
+      # Trims the system prompt sent on every request — recipe:
+      # https://aihero.dev/s/D9UXCK (Matt Pocock). Measure with `/context` before
+      # and after a change.
+      #
+      # Every prompt-affecting settings key as of claude-code 2.1.283 (read from
+      # the binary's settings schema), written out so a profile only flips values.
+      claudeSettings = {
+        enableArtifact = true; # replaces the deprecated disableArtifact
+        disableWorkflows = false; # Workflow tool; used for multi-agent runs
+        # true: bundled skills/workflows removed; built-in slash commands stay
+        # typable but hidden from the model.
+        disableBundledSkills = false;
+        disableClaudeAiConnectors = true; # claude.ai cloud MCP connectors
+        disableRemoteControl = false; # claude.ai/code, `claude remote-control`
+        disableAgentView = false; # `claude agents`, --bg, /background
+        includeGitInstructions = true; # built-in commit/PR workflow prompt
+        # Per skill: "on" | "name-only" (no description) | "user-invocable-only"
+        # (hidden from model, /name still works) | "off".
+        skillOverrides = { };
+      };
+
+      # Built-in tools; false = bare-name permissions.deny entry, which drops the
+      # schema from the payload (a scoped rule like "Bash(rm *)" only blocks calls).
+      # Deferred tools (loaded via ToolSearch) cost ~a name each until loaded, so
+      # denying them saves little; the always-loaded ones are marked (L).
+      # Glob/Grep are absent: the native binary folds them into Bash.
+      claudeTools = {
+        Agent = true; # (L)
+        Artifact = true; # (L) gated by enableArtifact above
+        ArtifactComments = true;
+        ArtifactData = true;
+        AskUserQuestion = true; # (L)
+        Bash = true; # (L)
+        CronCreate = true; # /loop <interval>
+        CronDelete = true;
+        CronList = true;
+        DesignSync = false;
+        Edit = true; # (L)
+        EndConversation = true;
+        EnterPlanMode = true;
+        EnterWorktree = true; # (L)
+        ExitPlanMode = true;
+        ExitWorktree = true;
+        LSP = true;
+        ListAgents = true; # (L)
+        ListMcpResourcesTool = true;
+        Monitor = true;
+        NotebookEdit = false;
+        PushNotification = true;
+        Read = true; # (L)
+        ReadMcpResourceDirTool = true;
+        ReadMcpResourceTool = true;
+        RemoteTrigger = false; # /schedule cloud routines
+        ReportFindings = true; # (L) /code-review
+        ScheduleWakeup = true; # (L) dynamic /loop
+        SendFeedback = false; # (L)
+        SendMessage = true;
+        Skill = true; # (L)
+        TaskCreate = true; # Task*: bg jobs, progress tracking
+        TaskGet = true;
+        TaskList = true;
+        TaskStop = true;
+        TaskUpdate = true;
+        ToolSearch = true; # (L) never deny: loads every deferred tool
+        WebFetch = true;
+        WebSearch = true;
+        Workflow = true; # (L)
+        Write = true; # (L)
+      };
     in
     {
-      home.file = claudeUserFiles ".claude" // claudeUserFiles ".claude-frontrow";
-
-      # settings.json keys owned by Nix: see ./claude-code-settings.nix. Override
-      # per profile, e.g. `tools.Workflow = false;` or `settings.enableArtifact = true;`.
+      # One Claude account per CLAUDE_CONFIG_DIR; the binary wrapper below picks
+      # frontrow under ~/Developer/frontrow. settings/tools are merged into each
+      # mutable settings.json by ./claude-code-settings.nix. Per-profile override:
+      # `settings = claudeSettings // { enableArtifact = false; };`.
       claude.profiles = {
-        private.configDir = ".claude";
-        frontrow.configDir = ".claude-frontrow";
+        private = {
+          configDir = ".claude";
+          settings = claudeSettings;
+          tools = claudeTools;
+        };
+        frontrow = {
+          configDir = ".claude-frontrow";
+          settings = claudeSettings;
+          tools = claudeTools;
+        };
       };
+
+      home.file = lib.mkMerge (
+        lib.mapAttrsToList (_: p: claudeUserFiles p.configDir) config.claude.profiles
+      );
 
       home.packages = with pkgs; [
         notebooklm
