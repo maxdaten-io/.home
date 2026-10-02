@@ -239,6 +239,50 @@
         worth attacking.
       '';
 
+      # /audit-skills — user-invoked only (disable-model-invocation), so it costs
+      # no context until typed. Rules distilled from Anthropic's skill-authoring
+      # and Fable 5 prompting guides; the skill re-reads both at run time.
+      auditSkillsSkill = ''
+        ---
+        name: audit-skills
+        description: Audits the project's Agent Skills (and CLAUDE.md) against Anthropic's skill-authoring and Fable 5 prompting guidance, then proposes evidence-backed fixes without applying them.
+        disable-model-invocation: true
+        argument-hint: "[path or skill name]"
+        ---
+
+        Audit the Agent Skills in this project against Anthropic's current guidance, and propose fixes. Don't apply anything yet.
+
+        Why: these skills were probably written for older Claude models. Anthropic's Fable 5 guide says skills written for prior models "are often too prescriptive for Claude Fable 5 and can degrade output quality". Fixes that delete text usually beat fixes that add it.
+
+        Scope: $ARGUMENTS. If that is empty, cover every `SKILL.md` and the files it references (look in `.claude/skills/`, plugin folders and anywhere else a `SKILL.md` lives). Also check CLAUDE.md files for the same problems where they apply. If you find no skills, say so and stop.
+
+        Primary sources (read them; don't rely on memory):
+        - https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices
+        - https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5
+
+        Check each skill against these rules:
+        - **Discovery:** `name` is lowercase with hyphens, at most 64 characters, and avoids "claude" and "anthropic". `description` is third person, at most 1,024 characters, and says both what the skill does and when to use it, with concrete trigger terms.
+        - **Conciseness:** flag text that explains things Claude already knows, gives a menu of options where one default would do, uses dates that will go stale, or uses different words for the same thing.
+        - **Prescriptiveness:** flag numbered step-by-step procedures, ALL-CAPS or MUST/NEVER emphasis, and lists of behaviours that one short instruction could replace. For each, ask: "if Claude did this step differently, what would actually break?" Keep strict instructions only where the answer is "something fragile or irreversible".
+        - **Structure:** the `SKILL.md` body is under 500 lines. Every reference file is linked directly from `SKILL.md`, never through another reference file. Reference files over 100 lines start with a table of contents. Content is split by topic so unrelated material isn't loaded.
+        - **Workflows:** multi-step work that really is ordered has a checklist Claude can copy and a verification step that sends it back on failure. Quality-critical output has a review-and-revise loop. Batch or destructive operations write a plan file and validate it before running.
+        - **Scripts:** each script handles its own errors, has no unexplained constants, and says whether Claude should run it or read it. Required packages are stated, not assumed. Note where package installation won't work (the Claude API has no network access).
+        - **Risky instructions on Fable 5:** flag anything that asks Claude to explain its reasoning in the response ("think out loud", "show your reasoning"). On Fable 5 this can trigger a `reasoning_extraction` refusal.
+        - **Tooling:** MCP tools are named as `Server:tool`, and paths use forward slashes.
+
+        Constraints:
+        - Every finding cites a file and line number plus the text it's about. No finding without evidence.
+        - Don't flag style preferences the docs don't support. Report a rule only where it's broken.
+        - Prefer cutting text to adding it. If removing an instruction might change behaviour, say what to test.
+
+        Output:
+        1. A table with one row per skill: lines in `SKILL.md`, overall verdict (keep / trim / restructure), and the top issue.
+        2. Findings ordered by impact, each with the file and line, the rule it breaks, and the proposed change as a short diff.
+        3. A short list of what to test after the changes: which skills to run, on which models (Haiku, Sonnet, Opus or Fable), and what result to expect.
+
+        Stop after the report and wait for me to say which fixes to apply.
+      '';
+
       # home.file entries, relative to each profile's configDir.
       claudeUserFiles = {
         "CLAUDE.md".text = claudeMd;
@@ -249,6 +293,7 @@
         };
         "skills/archify".source = archify;
         "skills/use-spark".source = "${spark-cli-skills}/skills/use-spark";
+        "skills/audit-skills/SKILL.md".text = auditSkillsSkill;
       };
 
       # Trims the system prompt sent on every request — recipe:
