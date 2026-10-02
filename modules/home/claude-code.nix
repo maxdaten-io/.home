@@ -18,13 +18,13 @@
 
       notebooklm = pkgs.python312Packages.buildPythonApplication rec {
         pname = "notebooklm-py";
-        version = "0.8.3";
+        version = "0.8.4";
         pyproject = true;
 
         src = pkgs.fetchPypi {
           pname = "notebooklm_py";
           inherit version;
-          hash = "sha256-fURMGRk+QFuucnezfCmjZck2qNJ4ofYpEPawbZKqvyo=";
+          hash = "sha256-snyu8tF3Tn0AnqUWAQJPHGKViV+pXyY8qkrduZPleJc=";
         };
 
         build-system = with pkgs.python312Packages; [
