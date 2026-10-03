@@ -101,8 +101,9 @@
           fish syntax (`end`, `and`/`or`, `set -x FOO val`, `string`, `psub`) in tool calls.
           Coreutils on PATH are GNU (nix) even on macOS — use GNU flags (`sed -i` with no
           suffix arg, `date -d`; not BSD `sed -i '''` / `date -v`).
-        - **My interactive shell is fish.** Only commands you hand *me* to run (`! <cmd>`
-          snippets, docs, READMEs) need fish syntax — no `<<<`, `$()` subshells, or
+        - **`! <cmd>` snippets run in your bash**, not my shell — write them in bash syntax.
+        - **My interactive shell is fish.** Only commands I type in my own terminal (docs,
+          READMEs, copy-paste instructions) need fish syntax — no `<<<`, `$()` subshells, or
           `export FOO=bar`; use `set`, `string`, `psub`.
 
         ## Working Style
