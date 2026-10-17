@@ -41,14 +41,26 @@
       xdg.configFile."cmux/sidebars/worktrees.js".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/Developer/.home/modules/home/cmux/sidebars/worktrees.js";
 
-      # Seeds the Dock of windows without a saved Dock; an existing one needs
-      # the in-app "reload Dock config" (or `cmux new-pane --placement dock`).
-      xdg.configFile."cmux/dock.json".text = builtins.toJSON {
-        controls = [
+      # Nix owns cmux.json (read-only); app settings changed in the UI land in
+      # Application Support instead. Vault only reads ~/.claude on its own, so
+      # the work account (~/.claude-frontrow, picked by the claude wrapper for
+      # ~/Developer/frontrow) is registered as an extra JSONL-backed agent.
+      # Group order is an app preference (sessionIndex.agentOrder), set by drag.
+      xdg.configFile."cmux/cmux.json".text = builtins.toJSON {
+        "$schema" = "https://raw.githubusercontent.com/manaflow-ai/cmux/main/web/data/cmux.schema.json";
+        schemaVersion = 1;
+        vault.agents = [
           {
-            id = "sessions";
-            title = "Sessions";
-            command = "cw sessions";
+            id = "claude-work";
+            name = "Claude (Front Row)";
+            iconAssetName = "AgentIcons/Claude"; # only icons bundled in cmux's Assets.car
+            sessionIdSource = {
+              type = "argvOption";
+              argvOption = "--resume";
+            };
+            resumeCommand = "env CLAUDE_CONFIG_DIR=${config.home.homeDirectory}/.claude-frontrow claude --resume {{sessionId}}";
+            cwd = "preserve";
+            sessionDirectory = "~/.claude-frontrow/projects";
           }
         ];
       };

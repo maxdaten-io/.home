@@ -9,7 +9,7 @@
 #                   if it declares any), close this workspace.
 #   cw sessions     fzf list of past claude sessions from both accounts, grouped
 #                   by main checkout; enter resumes one in a new workspace.
-#                   Meant to run as a cmux Dock control.
+#                   (cmux Vault covers the 30 most recent per account.)
 #
 # Worktree creation is left to `claude -w` so per-repo WorktreeCreate hooks run
 # (front-row-ai puts worktrees in ../<repo>.worktrees and builds a dev stack).
@@ -236,9 +236,10 @@ cmd_done() {
 }
 
 # --- sessions: Vault-like history across both claude accounts ------------------
-# cmux's Vault reads only ~/.claude (and returns ~30 sessions); this reads both
-# accounts' transcripts and groups them by main checkout via real git, so any
-# worktree shows up however it was started. Built to live in the cmux Dock.
+# cmux's Vault (with the claude-work agent from cmux.nix) shows ~30 sessions per
+# account, grouped by folder name; this reads every transcript of both
+# accounts and groups them by main checkout via real git, so any
+# worktree shows up however it was started.
 #
 # Cache: one TSV row per transcript, re-extracted only when its mtime changes:
 #   mtime  file  cwd  branch  title
