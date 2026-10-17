@@ -116,23 +116,6 @@
             return 1
           end
         '';
-
-        cw = ''
-          set -l session_name (basename $PWD)
-          # Replace dots with underscores (tmux doesn't allow dots in session names)
-          set session_name (string replace -a '.' '_' $session_name)
-
-          if tmux has-session -t $session_name 2>/dev/null
-            tmux attach -t $session_name
-            return
-          end
-
-          tmux new-session -d -s $session_name -c $PWD
-          tmux split-window -v -l 20% -t $session_name -c $PWD
-          tmux select-pane -t $session_name:0.0
-          tmux send-keys -t $session_name:0.0 "claude $argv" Enter
-          tmux attach -t $session_name
-        '';
       };
 
       programs.tmux = {
