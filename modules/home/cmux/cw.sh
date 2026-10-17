@@ -7,6 +7,9 @@
 #   cw done         from the worktree's shell: refuse if anything would be lost,
 #                   remove the worktree (through the repo's WorktreeRemove hooks
 #                   if it declares any), close this workspace.
+#   cw sessions     fzf list of past claude sessions from both accounts, grouped
+#                   by main checkout; enter resumes one in a new workspace.
+#                   Meant to run as a cmux Dock control.
 #
 # Worktree creation is left to `claude -w` so per-repo WorktreeCreate hooks run
 # (front-row-ai puts worktrees in ../<repo>.worktrees and builds a dev stack).
@@ -16,6 +19,7 @@ usage() {
   cat >&2 <<'EOF'
 usage: cw new <name>   new worktree workspace (claude -w <name>) in this repo's cmux group
        cw done         remove this worktree (refuses on unsaved work) and close its workspace
+       cw sessions     browse and resume past claude sessions (both accounts)
 EOF
   exit 2
 }
@@ -50,7 +54,9 @@ ref_of() { sed -n 's/^OK \([a-z_]*:[0-9]*\).*/\1/p' | head -1; }
 # leaf process isn't fish (e.g. the devenv TUI, whose `.devenv-wrapped` only
 # gets a fish child once the dev shell is up).
 surface_sig() {
-  cmux top --workspace "$1" --processes --format tsv |
+  local ids=refs
+  [[ $2 == *:* ]] || ids=uuids # same id form as the caller holds
+  cmux --id-format "$ids" top --workspace "$1" --processes --format tsv |
     awk -F'\t' -v s="$2" '
       $4 == "process" { name[$5] = $7; parent[$5] = $6 }
       END {
@@ -229,8 +235,210 @@ cmd_done() {
   close_stamped "$wt"
 }
 
+# --- sessions: Vault-like history across both claude accounts ------------------
+# cmux's Vault reads only ~/.claude (and returns ~30 sessions); this reads both
+# accounts' transcripts and groups them by main checkout via real git, so any
+# worktree shows up however it was started. Built to live in the cmux Dock.
+#
+# Cache: one TSV row per transcript, re-extracted only when its mtime changes:
+#   mtime  file  cwd  branch  title
+SESSION_DIRS=("$HOME/.claude/projects" "$HOME/.claude-frontrow/projects")
+CACHE=${XDG_CACHE_HOME:-$HOME/.cache}/cw/sessions.tsv
+WORK_PREFIX=$HOME/Developer/frontrow/
+
+oneline() { tr '\t\n\r' '   ' | cut -c1-160; }
+
+# Transcripts run to tens of MB: never parse one whole. The last top-level
+# `cwd` wins (tac reads from the end); title is /rename > claude's ai-title >
+# first real prompt. Title records repeat through the file, the last is current.
+# `|| true`: grep -m1 / head close the pipe early, which pipefail reports.
+extract_session() {
+  local f=$1 meta title
+  meta=$(tac "$f" | grep '"cwd":' | head -n 20 |
+    jq -r 'select(.cwd) | [.cwd, (.gitBranch // "")] | @tsv' 2>/dev/null | head -1) || true
+  if [[ -z $meta ]]; then
+    printf '%s\t\t\t\n' "$f" # no message ever recorded a cwd: cache as empty
+    return
+  fi
+  title=$(grep '"type":"custom-title"' "$f" | tail -1 | jq -r '.customTitle // empty' 2>/dev/null) || true
+  [[ -n $title ]] ||
+    title=$(grep '"type":"ai-title"' "$f" | tail -1 | jq -r '.aiTitle // empty' 2>/dev/null) || true
+  [[ -n $title ]] || title=$(head -n 200 "$f" | jq -r '
+      select(.type == "user" and (.isMeta | not)) | .message.content
+      | if type == "string" then . else ([.[]? | select(.type == "text") | .text] | join(" ")) end
+      | select(length > 0 and (startswith("<") | not))' 2>/dev/null | head -1) || true
+  printf '%s\t%s\t%s\n' "$f" "$meta" "$(oneline <<<"${title:-(untitled)}")"
+}
+
+index_sessions() {
+  mkdir -p "${CACHE%/*}"
+  local -A cached=()
+  local line rest f mtime d tmp
+  if [[ -f $CACHE ]]; then
+    while IFS= read -r line; do
+      rest=${line#*$'\t'}
+      cached[${rest%%$'\t'*}]=$line
+    done <"$CACHE"
+  fi
+  local files=()
+  shopt -s nullglob
+  for d in "${SESSION_DIRS[@]}"; do files+=("$d"/*/*.jsonl); done
+  shopt -u nullglob
+  ((${#files[@]})) || return 0
+  tmp=$(mktemp "${CACHE}.XXXXXX")
+  while IFS=$'\t' read -r mtime f; do
+    line=${cached[$f]:-}
+    if [[ ${line%%$'\t'*} == "$mtime" ]]; then
+      printf '%s\n' "$line"
+    else
+      printf '%s\t%s\n' "$mtime" "$(extract_session "$f")"
+    fi
+  done < <(stat -c $'%Y\t%n' "${files[@]}") >"$tmp"
+  mv "$tmp" "$CACHE"
+}
+
+# Sets AGE (no subshell: list_sessions calls this for every row).
+fmt_age() {
+  local s=$1
+  if ((s < 3600)); then
+    AGE="$((s / 60))m"
+  elif ((s < 86400)); then
+    AGE="$((s / 3600))h"
+  elif ((s < 604800)); then
+    AGE="$((s / 86400))d"
+  else AGE="$((s / 604800))w"; fi
+}
+
+# cwd -> ROOT, LABEL (globals, memoized: ~150 distinct dirs vs ~750 rows).
+# Real git where the directory still exists; for deleted worktrees fall back
+# to the two layouts we create them in. Root is the parent of the common dir
+# only when that is a plain `.git`; submodules (Meet-Commit, mealieservice,
+# maxdaten.io) keep theirs in the superproject's .git/modules/.
+declare -A RESOLVED=()
+resolve_cwd() {
+  local cwd=$1 out top common label=""
+  if [[ -n ${RESOLVED[$cwd]:-} ]]; then
+    ROOT=${RESOLVED[$cwd]%%$'\t'*}
+    LABEL=${RESOLVED[$cwd]#*$'\t'}
+    return
+  fi
+  # A leftover worktree dir without .git would resolve to whatever repo encloses
+  # it (~/Developer/frontrow is one), so a layout path must be its own toplevel.
+  local wt=""
+  [[ $cwd =~ ^(.*/\.claude/worktrees/[^/]+) || $cwd =~ ^(.*\.worktrees/[^/]+) ]] && wt=${BASH_REMATCH[1]}
+  if out=$(git -C "$cwd" rev-parse --path-format=absolute --show-toplevel --git-common-dir 2>/dev/null) &&
+    [[ -z $wt || ${out%%$'\n'*} == "$wt" ]]; then
+    top=${out%%$'\n'*}
+    common=${out#*$'\n'}
+    if [[ $common == */.git ]]; then
+      ROOT=${common%/.git}
+    else
+      # Submodule (or a worktree of one): its git dir records the checkout.
+      ROOT=$(git --git-dir="$common" rev-parse --path-format=absolute --show-toplevel 2>/dev/null) || ROOT=$top
+    fi
+    [[ $top == "$ROOT" ]] || label=${top##*/}
+    [[ $cwd == "$top" ]] || label+=${label:+/}${cwd#"$top"/}
+  elif [[ $cwd =~ ^(.*)/\.claude/worktrees/([^/]+) || $cwd =~ ^(.*)\.worktrees/([^/]+) ]]; then
+    ROOT=${BASH_REMATCH[1]}
+    label="${BASH_REMATCH[2]} (gone)"
+  else
+    ROOT=$cwd
+    [[ -d $cwd ]] || label="(gone)"
+  fi
+  LABEL=$label
+  RESOLVED[$cwd]=$ROOT$'\t'$LABEL
+}
+
+# fzf records (NUL-separated): file, cwd, root, account dir, two-line display —
+# WORK first, repos by their newest session, sessions newest first.
+list_sessions() {
+  [[ -f $CACHE ]] || return 0
+  local now mtime f cwd branch title section disp ROOT LABEL AGE
+  now=$(date +%s)
+  while IFS=$'\t' read -r mtime f cwd branch title; do
+    [[ -n $cwd ]] || continue
+    resolve_cwd "$cwd"
+    [[ $ROOT/ == "$WORK_PREFIX"* ]] && section=0 || section=1
+    # Two lines like Vault: "age  title" / dim "repo ▸ worktree (branch)".
+    # \x1f stands in for the line break until the final tr (see below).
+    fmt_age $((now - mtime))
+    title=${title#"${title%%[! ]*}"} # ai-titles can carry leading spaces
+    disp=$'\e[2m'$AGE$'\e[0m  '$title$'\x1f    \e[2m'${ROOT##*/}
+    [[ -z $LABEL ]] || disp+=$' \e[0;33m▸ '$LABEL$'\e[0;2m'
+    [[ -z $branch || $branch == main || $branch == master || $branch == development ]] ||
+      [[ $LABEL == *"$branch"* || $branch == "worktree-${LABEL%% *}" ]] || disp+=" ($branch)"
+    disp+=$'\e[0m'
+    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$section" "$mtime" "$f" "$cwd" "$ROOT" "${f%%/projects/*}" "$disp"
+  done <"$CACHE" |
+    awk -F'\t' -v OFS='\t' '{ rows[NR] = $0; root[NR] = $5; if ($2 > top[$5]) top[$5] = $2 }
+      END { for (i = 1; i <= NR; i++) print top[root[i]], rows[i] }' |
+    sort -t $'\t' -k2,2n -k1,1nr -k6,6 -k3,3nr | cut -f4- |
+    tr '\n\037' '\000\n' # NUL-separated records, real newline inside: fzf --read0
+}
+
+preview_session() {
+  local f=$1 cwd=$2 root=$3
+  printf '\e[1m%s\e[0m\n' "$(grep -F -- "$f" "$CACHE" | cut -f5 | head -1)"
+  printf '\e[2m%s  ·  %s\e[0m\n' "${cwd/#$HOME/\~}" "$(date -r "$f" '+%Y-%m-%d %H:%M')"
+  [[ -d $cwd ]] || printf '\e[33mworktree gone — resumes in %s\e[0m\n' "${root/#$HOME/\~}"
+  echo
+  tac "$f" | grep -m 60 -E '"type":"(user|assistant)"' | tac | jq -r '
+      select((.type == "user" or .type == "assistant") and (.isMeta | not))
+      | (.message.content | if type == "string" then . else ([.[]? | select(.type == "text") | .text] | join(" ")) end) as $t
+      | select(($t | length) > 0 and ($t | startswith("<") | not))
+      | (if .type == "user" then "\u001b[36m▶ " else "  " end) + ($t | gsub("\\s+"; " ") | .[0:400]) + "\u001b[0m"' \
+    2>/dev/null | tail -n 12 || true
+}
+
+# New workspace at the session's directory (main checkout if the worktree is
+# gone), resumed under the account that owns the transcript.
+resume_session() {
+  local f=$1 cwd=$2 root=$3 account=$4 dir id title out ws surface
+  id=$(basename "$f" .jsonl)
+  dir=$cwd
+  [[ -d $dir ]] || dir=$root
+  [[ -d $dir ]] || die "neither $cwd nor $root exists"
+  title=$(grep -F -- "$f" "$CACHE" | cut -f5 | head -1 | cut -c1-40)
+  # UUIDs, not workspace:N refs: from a Dock terminal, refs resolve against the
+  # Dock's socket capability, where the new workspace isn't found.
+  out=$(cmux --id-format uuids workspace create --name "↺ ${title:-$id}" --cwd "$dir" --focus true --json) ||
+    die "cmux workspace create failed"
+  ws=$(jq -er '.workspace_id' <<<"$out")
+  surface=$(jq -er '.surface_id' <<<"$out")
+  send_when_ready "$ws" "$surface" "env CLAUDE_CONFIG_DIR=$(shell_quote "$account") claude --resume $id"
+}
+
+cmd_sessions() {
+  case ${1:-} in
+  --list) list_sessions && return ;;
+  --refresh) index_sessions && list_sessions && return ;;
+  --preview) shift && preview_session "$@" && return ;;
+  --resume)
+    shift
+    resume_session "$@" >>"${CACHE%/*}/resume.log" 2>&1
+    return
+    ;;
+  esac
+  # CW_SELF lets an unbuilt checkout be tested (`CW_SELF="bash cw.sh"`).
+  local self=${CW_SELF:-$0} out
+  mkdir -p "${CACHE%/*}"
+  while :; do
+    # Opens at once on the cached list; the start binding re-indexes behind it.
+    out=$(list_sessions | fzf --read0 --ansi --delimiter $'\t' --with-nth 5 --with-shell 'bash -c' \
+      --no-sort --highlight-line --layout=reverse --info=inline-right --prompt 'session › ' \
+      --header 'enter resume · ctrl-r refresh · esc reset · ctrl-q quit' \
+      --preview "$self sessions --preview {1} {2} {3}" --preview-window 'down,45%,wrap,border-top' \
+      --bind "start:reload($self sessions --refresh)" \
+      --bind "ctrl-r:reload($self sessions --refresh)" \
+      --bind "enter:execute-silent(nohup $self sessions --resume {1} {2} {3} {4} >/dev/null 2>&1 &)" \
+      --expect ctrl-q) || true
+    [[ ${out%%$'\n'*} != ctrl-q ]] || break
+  done
+}
+
 case ${1:-} in
 new) shift && cmd_new "$@" ;;
 done) shift && cmd_done "$@" ;;
+sessions) shift && cmd_sessions "$@" ;;
 *) usage ;;
 esac

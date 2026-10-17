@@ -40,5 +40,17 @@
       # symlink would turn every tweak into a `just switch`.
       xdg.configFile."cmux/sidebars/worktrees.js".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/Developer/.home/modules/home/cmux/sidebars/worktrees.js";
+
+      # Seeds the Dock of windows without a saved Dock; an existing one needs
+      # the in-app "reload Dock config" (or `cmux new-pane --placement dock`).
+      xdg.configFile."cmux/dock.json".text = builtins.toJSON {
+        controls = [
+          {
+            id = "sessions";
+            title = "Sessions";
+            command = "cw sessions";
+          }
+        ];
+      };
     };
 }
