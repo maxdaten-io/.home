@@ -1,160 +1,163 @@
-// worktrees: one cmux workspace per git worktree, grouped by project, split
-// into WORK (~/Developer/frontrow — same rule the claude wrapper uses to pick
-// the work account) and PRIVATE. Pairs with `cw` (../cw.sh), which stamps each
-// workspace's description with `cw:<worktree path>`.
+// worktrees: per main checkout, the most recently active worktrees that have a
+// live coding agent — newest first, split into WORK (~/Developer/frontrow,
+// same rule the claude wrapper uses to pick the work account) and PRIVATE.
+// Pinned workspaces (the `claude agents` triage views) sit on top of their
+// section. Pairs with `cw` (../cw.sh). Agent-centric layout after cmux's
+// panel-subagents example.
 //
-// Why not w.branch / w.directory: they follow the *focused* pane, and the
-// claude pane's shell sits in the repo root while claude runs in the worktree,
-// so a focused claude pane reports `main`. Path comes from the stamp, else the
-// live agent's directory; branch/dirty from the tab sitting in that path.
+// A row is keyed by agents[].directory, not w.directory/w.branch: those follow
+// the *focused* pane, and with `claude -w` the claude pane's shell stays in the
+// repo root while claude itself runs in the worktree.
 //
 // Edits hot-reload: this file is symlinked out of the Nix store on purpose.
 
 const WORK = "/Developer/frontrow/";
-const COLOR = { needs_input: "#E8912D", working: "#4C9EEB", idle: "#8E8E93" };
-const PR_COLOR = { open: "#3FB950", merged: "#A371F7", closed: "#8E8E93" };
+const PER_REPO = 5;
+const STATUS = {
+  needs_input: { color: "#E8912D", rank: 0, word: "needs input" },
+  working: { color: "#4C9EEB", rank: 1, word: "working" },
+  idle: { color: "#8E8E93", rank: 2, word: "" },
+};
+const rankOf = (a) => STATUS[a.status]?.rank ?? 9;
 
-// --- derived data --------------------------------------------------------------
-// Ended sessions linger in w.agents (newest first) with stale directories.
-const live = (w) => (w.agents ?? []).find((a) => a.status !== "ended");
+// data.clock() is documented but undefined in the JS runtime (TypeError seen
+// live); rows re-render on the data tick anyway.
+const nowSecs = () => data.clock?.()?.epoch ?? Date.now() / 1000;
+const secs = (t) => (t > 1e12 ? t / 1000 : t); // ms vs s isn't documented
 
-function worktreePath(w) {
-  if (w.description && w.description.startsWith("cw:")) return w.description.slice(3);
-  return live(w)?.directory ?? w.directory ?? "";
+function fmtAge(s) {
+  const m = Math.max(0, Math.floor(s / 60));
+  if (m < 60) return m + "m";
+  const h = Math.floor(m / 60);
+  return h < 24 ? h + "h" : Math.floor(h / 24) + "d";
 }
 
-// <repo>/.claude/worktrees/<name> (claude default) or <repo>.worktrees/<name>
-// (front-row-ai's WorktreeCreate hook) -> <repo>.
-function projectOf(path) {
+// The sidebar can't run git, so the main checkout comes from the path alone:
+// <root>/.claude/worktrees/<n> (claude default) or <root>.worktrees/<n>
+// (front-row-ai's WorktreeCreate hook). Anything else IS a main checkout —
+// no prefix folding: gitops/onboarding/mealieservice is its own repo.
+function rootOf(path) {
   const m = path.match(/^(.*)\/\.claude\/worktrees\/[^/]+/) ?? path.match(/^(.*)\.worktrees\/[^/]+/);
-  return (m ? m[1] : path).split("/").filter(Boolean).pop() ?? "?";
+  return m ? m[1] : path;
+}
+const base = (p) => p.split("/").filter(Boolean).pop() ?? "?";
+
+// The agent's own tab knows the last prompt typed into *it*; harness
+// injections (`<task-notification>…`) identify nothing, skip them.
+function promptOf(w, a) {
+  const tab = (w.tabs ?? []).find((t) => t.id === a.panelId);
+  return [a.title, tab?.latestPrompt, w.latestPrompt].find((p) => p && !p.trimStart().startsWith("<")) ?? "";
 }
 
-function gitOf(w) {
-  const p = worktreePath(w);
-  const t = (w.tabs ?? []).find((t) => t.directory === p && t.branch);
-  return t ? { branch: t.branch, dirty: !!t.dirty } : { branch: w.branch, dirty: !!w.dirty };
-}
-
-// "2● 1⏵": needs-input / working counts, so a collapsed header still alerts.
-function counts(members) {
-  let ask = 0, run = 0;
-  for (const w of members) {
-    const s = live(w)?.status;
-    if (s === "needs_input") ask++;
-    else if (s === "working") run++;
+// --- model ---------------------------------------------------------------------
+// One row per worktree path with at least one non-ended agent; when several
+// agents share a path, the most urgent (then most recent) one represents it.
+function collectRows(ws) {
+  const byPath = new Map();
+  for (const w of ws) {
+    if (w.pinned) continue; // triage views render separately
+    for (const a of w.agents ?? []) {
+      if (a.status === "ended") continue;
+      const path = a.directory ?? w.directory ?? "";
+      if (!path) continue;
+      const at = secs(a.lastActivityAt ?? a.sinceEpoch ?? 0);
+      const prev = byPath.get(path);
+      const better = !prev || rankOf(a) < rankOf(prev.agent) || (rankOf(a) === rankOf(prev.agent) && at > prev.at);
+      const tab = (w.tabs ?? []).find((t) => t.directory === path && t.branch);
+      const row = better ? { path, root: rootOf(path), w, agent: a, at, tab, others: 0 } : prev;
+      row.at = Math.max(at, prev?.at ?? 0);
+      row.others = prev ? prev.others + 1 : 0;
+      byPath.set(path, row);
+    }
   }
-  return [ask ? ask + "●" : "", run ? run + "⏵" : ""].filter(Boolean).join(" ");
+  return [...byPath.values()];
 }
 
-// --- collapse state ------------------------------------------------------------
-// Native groups persist collapse in cmux (optimistic local override until the
-// data catches up). Sections and derived buckets are local to this sidebar.
-const groupOverride = new Map();
-const localCollapsed = new Set();
+// Collapsed repos/sections and expanded "+N older" lists, local to this view.
+const collapsed = new Set();
+const expanded = new Set();
 const [tick, setTick] = signal(0);
-const bump = () => setTick(tick() + 1);
+const flip = (set, key) => {
+  if (set.has(key)) set.delete(key);
+  else set.add(key);
+  setTick(tick() + 1);
+};
 
-function isCollapsed(g) {
-  tick();
-  if (groupOverride.has(g.id)) {
-    if (groupOverride.get(g.id) === g.collapsed) groupOverride.delete(g.id);
-    else return groupOverride.get(g.id);
-  }
-  return g.collapsed;
-}
-
-function toggleGroup(g) {
-  const next = !isCollapsed(g);
-  groupOverride.set(g.id, next);
-  bump();
-  cmux(next ? "workspace.group.collapse" : "workspace.group.expand", { group_id: g.id });
-}
-
-function toggleLocal(key) {
-  if (localCollapsed.has(key)) localCollapsed.delete(key);
-  else localCollapsed.add(key);
-  bump();
-}
-
-const isLocalCollapsed = (key) => (tick(), localCollapsed.has(key));
-
-// --- layout --------------------------------------------------------------------
-// One flat list: section header, pinned rows (the `claude agents` triage view),
-// native groups (cw-created: one per repo), then ungrouped strays bucketed by
-// derived project name.
 const entries = computed(() => {
+  tick();
   const ws = data.workspaces() ?? [];
-  const groups = data.groups() ?? [];
-  const byId = new Map(ws.map((w) => [w.id, w]));
+  const rows = collectRows(ws);
   const out = [];
   for (const [label, work] of [["WORK", true], ["PRIVATE", false]]) {
-    const inSection = (w) => worktreePath(w).includes(WORK) === work;
-    const secGroups = groups.filter((g) => byId.has(g.anchorId) && inSection(byId.get(g.anchorId)));
-    const strays = ws.filter((w) => !w.group && inSection(w));
-    if (!secGroups.length && !strays.length) continue;
+    const inSection = (path) => path.includes(WORK) === work;
+    const pinned = ws.filter((w) => w.pinned && inSection(w.directory ?? ""));
+    const repos = new Map();
+    for (const r of rows.filter((r) => inSection(r.root))) {
+      if (!repos.has(r.root)) repos.set(r.root, []);
+      repos.get(r.root).push(r);
+    }
+    if (!pinned.length && !repos.size) continue;
 
     const secKey = "s:" + label;
-    out.push({ kind: "section", id: secKey, label });
-    if (isLocalCollapsed(secKey)) continue;
+    out.push({ kind: "section", key: secKey, label, dots: rows.filter((r) => inSection(r.root)).map((r) => r.agent.status) });
+    if (collapsed.has(secKey)) continue;
 
-    for (const w of strays.filter((w) => w.pinned)) out.push({ kind: "ws", id: w.id, depth: 0 });
+    for (const w of pinned) out.push({ kind: "pinned", key: "p:" + w.id, w });
 
-    for (const g of secGroups) {
-      out.push({ kind: "group", id: "g:" + g.id, groupId: g.id });
-      if (isCollapsed(g)) continue;
-      for (const w of ws) if (w.group === g.id && w.id !== g.anchorId) out.push({ kind: "ws", id: w.id, depth: 1 });
-    }
-
-    const buckets = new Map();
-    for (const w of strays.filter((w) => !w.pinned)) {
-      const p = projectOf(worktreePath(w));
-      if (!buckets.has(p)) buckets.set(p, []);
-      buckets.get(p).push(w);
-    }
-    for (const [p, members] of buckets) {
-      const key = "d:" + label + ":" + p;
-      out.push({ kind: "bucket", id: key, label: p, work });
-      if (isLocalCollapsed(key)) continue;
-      for (const w of members) out.push({ kind: "ws", id: w.id, depth: 1 });
+    const ordered = [...repos.entries()]
+      .map(([root, rs]) => [root, rs.sort((x, y) => y.at - x.at)])
+      .sort((x, y) => y[1][0].at - x[1][0].at);
+    for (const [root, rs] of ordered) {
+      const repoKey = "r:" + root;
+      out.push({ kind: "repo", key: repoKey, root, dots: rs.map((r) => r.agent.status) });
+      if (collapsed.has(repoKey)) continue;
+      const shown = expanded.has(repoKey) ? rs : rs.slice(0, PER_REPO);
+      for (const r of shown) out.push({ kind: "row", key: "w:" + r.path, row: r });
+      if (rs.length > PER_REPO) {
+        out.push({ kind: "more", key: "m:" + root, repoKey, hidden: rs.length - PER_REPO });
+      }
     }
   }
   return out;
 });
 
 // --- views ---------------------------------------------------------------------
-const wsById = (id) => (data.workspaces() ?? []).find((w) => w.id === id);
-const select = (id) => id && cmux("workspace.select", { workspace_id: id });
+function jump(w, a) {
+  cmux("workspace.select", { workspace_id: w.id });
+  if (a?.surfaceId) cmux("surface.focus", { surface_id: a.surfaceId, workspace_id: w.id });
+}
 
-function sectionHeader(entry) {
-  const members = () =>
-    (data.workspaces() ?? []).filter((w) => worktreePath(w).includes(WORK) === (entry.label === "WORK"));
-  return HStack({ spacing: 6 }, [
-    Text(entry.label).font(10).weight("bold").color("tertiary"),
-    Text(() => (isLocalCollapsed(entry.id) ? counts(members()) : "")).font(10).color("#E8912D"),
+function dotsView(statusesFn) {
+  return ForEach(
+    { items: () => statusesFn().map((s, i) => ({ id: i + ":" + s, s })), key: (d) => d.id },
+    (d) => Circle({ size: 5 }).fill(() => STATUS[d().s]?.color ?? "#7f7f7f66"),
+  );
+}
+
+function sectionHeader(e) {
+  return HStack({ spacing: 4 }, [
+    Text(() => e().label).font(10).weight("bold").color("tertiary"),
     Spacer(),
+    // Collapsed: keep the alert shape visible (needs-input/working only).
+    dotsView(() => (collapsed.has(e().key) ? e().dots.filter((s) => s !== "idle") : [])),
   ])
     .paddingHorizontal(8)
     .paddingTop(10)
     .paddingBottom(2)
     .frame({ maxWidth: "infinity" })
     .cursor("pointer")
-    .onTap(() => toggleLocal(entry.id));
+    .onTap(() => flip(collapsed, e().key));
 }
 
-function chevron(collapsed) {
-  return Image("chevron.right")
-    .font(9).weight("semibold").color("tertiary")
-    .rotation(() => (collapsed() ? 0 : 90))
-    .frame({ width: 12, height: 14 });
-}
-
-function headerRow(collapsed, onToggle, label, members, onTap, menu) {
-  const row = HStack({ spacing: 6 }, [
-    chevron(collapsed).onTap(onToggle),
-    Text(label).font(12).weight("semibold").lineLimit(1).truncation("tail"),
+function repoHeader(e) {
+  return HStack({ spacing: 6 }, [
+    Image("chevron.right")
+      .font(9).weight("semibold").color("tertiary")
+      .rotation(() => (tick(), collapsed.has(e().key) ? 0 : 90))
+      .frame({ width: 12, height: 14 }),
+    Text(() => base(e().root)).font(12).weight("semibold").lineLimit(1).truncation("tail"),
     Spacer(),
-    Text(() => counts(members())).font(11).color("#E8912D"),
+    dotsView(() => e().dots),
   ])
     .paddingLeading(6)
     .paddingTrailing(10)
@@ -162,115 +165,100 @@ function headerRow(collapsed, onToggle, label, members, onTap, menu) {
     .cornerRadius(7)
     .hoverBackground("#7f7f7f1c")
     .frame({ maxWidth: "infinity" })
-    .onTap(onTap);
-  return menu ? row.contextMenu(menu) : row;
+    .onTap(() => flip(collapsed, e().key));
 }
 
-function groupHeader(entry) {
-  const g = () => (data.groups() ?? []).find((x) => x.id === entry.groupId) ?? { id: entry.groupId, name: "" };
-  const members = () => (data.workspaces() ?? []).filter((w) => w.group === entry.groupId);
-  return headerRow(
-    () => isCollapsed(g()),
-    () => toggleGroup(g()),
-    () => g().name,
-    members,
-    () => select(g().anchorId), // anchor = the repo-root workspace cw created
-    [
-      Button(() => (isCollapsed(g()) ? "Expand" : "Collapse"), () => toggleGroup(g())),
-      Button(() => (g().pinned ? "Unpin Group" : "Pin Group"), () =>
-        cmux("workspace.group.action", { group_id: entry.groupId, action: g().pinned ? "unpin" : "pin" })),
-      Divider(),
-      Button("Ungroup", () => cmux("workspace.group.action", { group_id: entry.groupId, action: "ungroup" })),
-    ],
-  );
+function pinnedRow(e) {
+  const w = () => e().w;
+  return HStack({ spacing: 6 }, [
+    Image("pin.fill").font(8).color("tertiary"),
+    Text(() => w().title).font(12).lineLimit(1).truncation("tail")
+      .color(() => (w().selected ? "primary" : "secondary")),
+    Spacer(),
+    Text(() => (w().unread > 0 ? String(w().unread) : "")).font(10).bold().color("#E4573D"),
+  ])
+    .paddingHorizontal(8)
+    .paddingVertical(4)
+    .cornerRadius(7)
+    .background(() => (w().selected ? "#7f7f7f3d" : null))
+    .hoverBackground("#7f7f7f24")
+    .frame({ maxWidth: "infinity" })
+    .onTap(() => jump(w(), null));
 }
 
-function bucketHeader(entry) {
-  // Recomputed, not captured: the template runs once per key, membership changes.
-  const members = () =>
-    (data.workspaces() ?? []).filter((w) =>
-      !w.group && !w.pinned && worktreePath(w).includes(WORK) === entry.work && projectOf(worktreePath(w)) === entry.label);
-  return headerRow(
-    () => isLocalCollapsed(entry.id),
-    () => toggleLocal(entry.id),
-    entry.label,
-    members,
-    () => toggleLocal(entry.id),
-    null,
-  ).opacity(0.85);
-}
-
-function wsRow(entry) {
-  const w = () => wsById(entry.id);
-  const agent = () => (w() ? live(w()) : undefined);
-  const status = () => agent()?.status;
-  const git = () => (w() ? gitOf(w()) : {});
-  const pr = () => w()?.pr;
-  const age = () => {
-    let since = agent()?.sinceEpoch ?? w()?.latestAt;
-    if (!since || !status() || status() === "idle") return "";
-    if (since > 1e12) since /= 1000; // ms vs s isn't documented; accept both
-    // data.clock() is documented but undefined in the JS runtime (TypeError
-    // seen live), so fall back to Date; rows re-render on the ~1s data tick.
-    const now = data.clock?.()?.epoch ?? Date.now() / 1000;
-    const min = Math.max(0, Math.floor((now - since) / 60));
-    return min < 60 ? min + "m" : Math.floor(min / 60) + "h";
+function worktreeRow(e) {
+  const r = () => e().row;
+  const a = () => r().agent;
+  const isMain = () => r().path === r().root;
+  const name = () => {
+    const branch = r().tab?.branch;
+    const label = isMain() ? (branch ? branch + " (main checkout)" : "main checkout") : base(r().path);
+    return label + (r().tab?.dirty ? "*" : "") + (r().others ? "  +" + r().others : "");
   };
-  // Line 2 only while it matters: the first prompt is what identifies a session.
+  const time = () => {
+    const s = a().status;
+    if ((s === "working" || s === "needs_input") && a().sinceEpoch) return fmtAge(nowSecs() - secs(a().sinceEpoch));
+    return r().at ? fmtAge(nowSecs() - r().at) + " ago" : "";
+  };
+  // Line 2 is the identity: what this session was asked to do.
   const detail = () => {
-    if (status() !== "needs_input" && status() !== "working") return "";
-    const what = status() === "needs_input" ? "needs input" : "working";
-    // agents[].title is absent in practice; latestPrompt can be a harness
-    // injection like `<task-notification>…`, which identifies nothing.
-    const prompt = [agent()?.title, w()?.latestPrompt].find((p) => p && !p.trimStart().startsWith("<"));
-    return prompt ? what + " · “" + prompt + "”" : what;
+    const word = STATUS[a().status]?.word ?? "";
+    const prompt = promptOf(r().w, a());
+    return [word, prompt ? "“" + prompt + "”" : ""].filter(Boolean).join(" · ");
   };
-  const selected = () => !!w()?.selected;
+  const selected = () => !!r().w.selected;
 
   return VStack({ spacing: 1, alignment: "leading" }, [
     HStack({ spacing: 6 }, [
-      Circle({ size: 7 }).fill(() => COLOR[status()] ?? "clear"),
-      Text(() => (w()?.title ?? "") + (git().dirty ? "*" : ""))
-        .font(13).lineLimit(1).truncation("tail").marquee()
+      Circle({ size: 7 }).fill(() => STATUS[a().status]?.color ?? "clear"),
+      Text(name).font(13).lineLimit(1).truncation("middle")
         .color(() => (selected() ? "primary" : "secondary")),
       Spacer({ minLength: 4 }),
-      Text(() => (w()?.unread > 0 ? String(w().unread) : "")).font(10).bold().color("#E4573D"),
-      Text(() => (pr() ? "#" + pr().number : ""))
-        .font(11).color(() => PR_COLOR[pr()?.status] ?? "secondary")
-        .onTap(() => pr() && openURL(pr().url)),
-      Text(age).font(11).monospaced().color("tertiary"),
+      Text(() => (r().w.pr ? "#" + r().w.pr.number : "")).font(11).color("secondary")
+        .onTap(() => r().w.pr && openURL(r().w.pr.url)),
+      Text(time).font(10).monospaced().color("tertiary"),
     ]),
     Text(detail)
       .font(11).lineLimit(1).truncation("tail")
-      .color(() => (status() === "needs_input" ? "#E8912D" : "tertiary"))
+      .color(() => (a().status === "needs_input" ? "#E8912D" : "tertiary"))
       .paddingLeading(13)
       .frame(() => ({ maxWidth: "infinity", height: detail() ? 15 : 0 })),
   ])
     .paddingHorizontal(8)
     .paddingVertical(4)
-    .marginLeading(entry.depth ? 12 : 0)
+    .marginLeading(12)
     .cornerRadius(7)
     .background(() => (selected() ? "#7f7f7f3d" : null))
     .hoverBackground(() => (selected() ? "#7f7f7f3d" : "#7f7f7f24"))
     .frame({ maxWidth: "infinity" })
-    .onTap(() => select(entry.id))
+    .onTap(() => jump(r().w, a()))
     .contextMenu([
-      Button(() => (w()?.pinned ? "Unpin" : "Pin"), () =>
-        cmux("workspace.action", { action: w()?.pinned ? "unpin" : "pin", workspace_id: entry.id })),
-      Button("Mark as Read", () => cmux("workspace.action", { action: "mark_read", workspace_id: entry.id })),
-      Divider(),
-      Button("Close", () => cmux("workspace.close", { workspace_id: entry.id })).destructive(),
+      Button("Copy Path", () => clipboard.write(r().path)),
+      Button("Mark as Read", () => cmux("workspace.action", { action: "mark_read", workspace_id: r().w.id })),
     ]);
+}
+
+function moreRow(e) {
+  return Text(() => (tick(), expanded.has(e().repoKey) ? "show fewer" : "+" + e().hidden + " older"))
+    .font(11).color("tertiary")
+    .paddingLeading(33)
+    .paddingVertical(2)
+    .frame({ maxWidth: "infinity", alignment: "leading" })
+    .cursor("pointer")
+    .onTap(() => flip(expanded, e().repoKey));
 }
 
 sidebar(() =>
   VStack({ spacing: 1 }, [
-    ForEach({ items: entries, key: (e) => e.id }, (e) => {
-      const entry = e(); // kind and ids are stable per key
-      if (entry.kind === "section") return sectionHeader(entry);
-      if (entry.kind === "group") return groupHeader(entry);
-      if (entry.kind === "bucket") return bucketHeader(entry);
-      return wsRow(entry);
+    ForEach({ items: entries, key: (e) => e.key }, (e) => {
+      const kind = e().kind; // stable per key
+      if (kind === "section") return sectionHeader(e);
+      if (kind === "repo") return repoHeader(e);
+      if (kind === "pinned") return pinnedRow(e);
+      if (kind === "more") return moreRow(e);
+      return worktreeRow(e);
     }),
+    Text(() => (entries().length ? "" : "No live agents. `cw new <name>` starts one in a worktree."))
+      .font(11).color("tertiary").paddingHorizontal(10),
   ]),
 );
