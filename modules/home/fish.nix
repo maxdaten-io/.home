@@ -83,6 +83,25 @@
         interactiveShellInit = ''
           # devenv auto-activation: https://devenv.sh/auto-activation/
           if command -q devenv
+              # cmux session restore / vault resume types `claude --resume …`
+              # into a fresh shell; `devenv shell`'s PTY proxy would swallow
+              # that queued line. Take it off the tty before the hook fires and
+              # replay it in the hook-spawned devenv shell. The file is removed
+              # on first read, so the line runs at most once.
+              if test -n "$DEVENV_ROOT"; and set -q _DEVENV_REPLAY
+                  if test -f $_DEVENV_REPLAY
+                      set -g __devenv_replay_cmd (cat $_DEVENV_REPLAY | string collect)
+                      rm -f $_DEVENV_REPLAY
+                      function __devenv_replay --on-event fish_prompt
+                          functions -e __devenv_replay
+                          eval $__devenv_replay_cmd
+                      end
+                  end
+                  set -e _DEVENV_REPLAY
+              else if test -z "$DEVENV_ROOT"; and ${pkgs.bash}/bin/bash -c 'read -t 0 </dev/tty' 2>/dev/null; and test -n "$(devenv hook-should-activate 2>/dev/null)"
+                  set -gx _DEVENV_REPLAY (mktemp)
+                  ${pkgs.bash}/bin/bash -c 'IFS= read -r l </dev/tty; printf %s "$l"' >$_DEVENV_REPLAY
+              end
               devenv hook fish | source
           end
         '';
