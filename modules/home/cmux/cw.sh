@@ -4,6 +4,9 @@
 #   cw new <name>   from anywhere inside a repo: find-or-create the repo's cmux
 #                   group, open a workspace in it running `claude -w <name>`,
 #                   then a right pane (shell + lazygit tab) inside the worktree.
+#   cw here [name]  from anywhere inside a repo: same group, but a workspace on
+#                   the main checkout running plain `claude` — no worktree, no
+#                   branch (for repos that work on main, like this one).
 #   cw done         from the worktree's shell: refuse if anything would be lost,
 #                   remove the worktree (through the repo's WorktreeRemove hooks
 #                   if it declares any), close this workspace.
@@ -18,6 +21,7 @@
 usage() {
   cat >&2 <<'EOF'
 usage: cw new <name>   new worktree workspace (claude -w <name>) in this repo's cmux group
+       cw here [name] new workspace on the main checkout (plain claude) in this repo's cmux group
        cw done         remove this worktree (refuses on unsaved work) and close its workspace
        cw sessions     browse and resume past claude sessions (both accounts)
 EOF
@@ -91,6 +95,13 @@ send_when_ready() {
   cmux send-key --workspace "$ws" --surface "$surface" enter >/dev/null
 }
 
+# Find-or-create the cmux group for main checkout $1 (idempotent per root).
+repo_group() {
+  cmux workspace-group create --name "$(basename "$1")" --cwd "$1" \
+    --idempotency-key "cw:$1" --json | jq -er '.group.ref' ||
+    die "could not find or create cmux group for $1"
+}
+
 cmd_new() {
   local name=${1:-}
   [[ $name =~ ^[A-Za-z0-9._-]+$ ]] || die "name must match [A-Za-z0-9._-]+, got '${name}'"
@@ -98,10 +109,7 @@ cmd_new() {
   local root before group ws claude_surface
   root=$(repo_root "$PWD")
   before=$(worktree_paths "$root")
-
-  group=$(cmux workspace-group create --name "$(basename "$root")" --cwd "$root" \
-    --idempotency-key "cw:$root" --json | jq -er '.group.ref') ||
-    die "could not find or create cmux group for $root"
+  group=$(repo_group "$root")
 
   ws=$(cmux workspace create --name "$name" --cwd "$root" --group "$group" --focus true | ref_of)
   [[ -n $ws ]] || die "cmux workspace create returned no workspace ref"
@@ -144,6 +152,20 @@ cmd_new() {
     --workspace "$ws" >/dev/null
 
   echo "$ws  $wt"
+}
+
+# No description stamp on purpose: unstamped, the worktrees sidebar files the
+# session under the repo's main checkout, and `cw done` leaves it alone.
+cmd_here() {
+  local root name group ws surface
+  root=$(repo_root "$PWD") # the main checkout even when run from a worktree
+  name=${1:-$(basename "$root")}
+  group=$(repo_group "$root")
+  ws=$(cmux workspace create --name "$name" --cwd "$root" --group "$group" --focus true | ref_of)
+  [[ -n $ws ]] || die "cmux workspace create returned no workspace ref"
+  surface=$(cmux list-panes --workspace "$ws" --json | jq -er '.panes[0].selected_surface_ref')
+  send_when_ready "$ws" "$surface" "claude"
+  echo "$ws  $root"
 }
 
 # Runs every WorktreeRemove hook command declared in the repo's claude settings,
@@ -439,6 +461,7 @@ cmd_sessions() {
 
 case ${1:-} in
 new) shift && cmd_new "$@" ;;
+here) shift && cmd_here "$@" ;;
 done) shift && cmd_done "$@" ;;
 sessions) shift && cmd_sessions "$@" ;;
 *) usage ;;
