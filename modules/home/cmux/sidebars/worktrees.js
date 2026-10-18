@@ -117,6 +117,18 @@ function promptOf(w, a) {
   return [a?.title, tab?.latestPrompt, w.latestPrompt].find((p) => p && !p.trimStart().startsWith("<")) ?? "";
 }
 
+// Claude Code titles its terminal "<status glyph> <session name>" (✳ idle,
+// spinner frames while working), so a glyph-led tab title names the session.
+// The workspace title follows the *focused* tab instead: with a shell focused
+// it reads "claude attach <id> ~/D/.home" or a bare path. The agent's own tab
+// goes first, but panelId can point at the attaching shell, so any tab counts.
+const GLYPH = /^[^\p{L}\p{N}~/.\s]+\s+/u;
+function sessionName(w, a) {
+  const tabs = w.tabs ?? [];
+  const named = [tabs.find((t) => t.id === a?.panelId), ...tabs].find((t) => GLYPH.test(t?.title ?? ""));
+  return (named?.title ?? w.title ?? "").replace(GLYPH, "");
+}
+
 // --- model ---------------------------------------------------------------------
 // One row per worktree path, plus one per workspace for agents running in a
 // main checkout (those share the root path, but each is its own session, named
@@ -340,7 +352,7 @@ function worktreeRow(e) {
   const a = () => r().agent;
   const isMain = () => r().path === r().root && !r().session;
   const name = () => {
-    const label = isMain() ? "" : r().session ? r().w.title || base(r().path) : base(r().path);
+    const label = isMain() ? "" : r().session ? sessionName(r().w, a()) || base(r().path) : base(r().path);
     return label + (r().others ? "  +" + r().others : "");
   };
   const branch = () => r().tab?.branch ?? (isMain() ? r().w?.branch : null);
