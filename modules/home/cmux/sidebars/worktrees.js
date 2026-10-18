@@ -61,7 +61,10 @@ const NF = {
   pin: "\u{F0403}",
   console: "\u{F018D}",
 };
-const icon = (glyph, size) => Text(glyph).font(size).lineLimit(1).fixedSize();
+// The fallback font's advance is narrower than md glyph ink and Text clips at
+// its advance (right edge cut; padding/frame don't help, verified live). A
+// trailing space widens the text itself so the whole glyph draws.
+const icon = (glyph, size) => Text(glyph + " ").font(size).lineLimit(1).fixedSize();
 
 const STATUS = {
   needs_input: { color: PAL.orange, rank: 0, word: "needs input", icon: NF.alert },
@@ -309,7 +312,7 @@ function repoHeader(e) {
   const accent = SECTION[e().section].color;
   const header = HStack({ spacing: 6 }, [
     chevron(() => e().ck),
-    Text(() => (tick(), collapsed.has(e().ck) ? NF.folder : NF.folderOpen)).font(13).lineLimit(1).fixedSize().color(accent),
+    Text(() => (tick(), collapsed.has(e().ck) ? NF.folder : NF.folderOpen) + " ").font(13).lineLimit(1).fixedSize().color(accent),
     Text(() => base(e().root)).font(12).weight("semibold").lineLimit(1).truncation("tail"),
     Spacer(),
     dotsView(() => e().dots),
@@ -393,7 +396,7 @@ function worktreeRow(e) {
   // group header has the icon.
   const lead = isMain()
     ? HStack({ spacing: 6 }, [
-        icon(NF.console, 13).color(() => (r().w ? "secondary" : "tertiary")), // natural width: md glyphs run wider than 1em and a fixed frame clips them
+        icon(NF.console, 13).color(() => (r().w ? "secondary" : "tertiary")),
         Text(() => NF.branch + (branch() ? " " + branch() : "") + (dirty() ? " !" : ""))
           .font(11).weight("medium").color(PAL.fg0)
           .paddingHorizontal(5).paddingVertical(1).background(GIT).cornerRadius(4)
