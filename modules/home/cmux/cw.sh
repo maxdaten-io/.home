@@ -11,7 +11,8 @@
 # Both make sure the repo has its main-checkout workspace: a plain shell at the
 # root, stamped "cw:<root>", that the worktrees sidebar pins as the repo's
 # first row. Sessions are always workspaces of their own.
-#   cw done         from the worktree's shell: refuse if anything would be lost,
+#   cw done [path]  from the worktree's shell (or for <path> from anywhere, which
+#                   is how the sidebar's "Done" runs it): refuse if anything would be lost,
 #                   remove the worktree (through the repo's WorktreeRemove hooks
 #                   if it declares any), close this workspace.
 #   cw sessions     fzf list of past claude sessions from both accounts, grouped
@@ -26,7 +27,7 @@ usage() {
   cat >&2 <<'EOF'
 usage: cw new <name>   new worktree workspace (claude -w <name>) in this repo's cmux group
        cw here [name] new workspace on the main checkout (plain claude) in this repo's cmux group
-       cw done         remove this worktree (refuses on unsaved work) and close its workspace
+       cw done [path]  remove this (or <path>'s) worktree (refuses on unsaved work) and close its workspace
        cw sessions     browse and resume past claude sessions (both accounts)
 EOF
   exit 2
@@ -213,13 +214,17 @@ close_stamped() {
 }
 
 cmd_done() {
-  local wt root branch
-  if ! wt=$(git rev-parse --show-toplevel 2>/dev/null); then
+  local wt root branch target=${1:-}
+  if ! wt=$(git -C "${target:-.}" rev-parse --show-toplevel 2>/dev/null); then
     # claude -w deletes a clean worktree itself on exit, leaving this shell in
-    # a deleted directory; fall back to the workspace's stamp.
+    # a deleted directory; fall back to the workspace's stamp (or the path given).
     local stamp
-    stamp=$(cmux workspace list --json | jq -r --arg id "${CMUX_WORKSPACE_ID:-}" \
-      '.workspaces[] | select(.id == $id or .ref == $id) | .description // empty')
+    if [[ -n $target ]]; then
+      stamp="cw:$target"
+    else
+      stamp=$(cmux workspace list --json | jq -r --arg id "${CMUX_WORKSPACE_ID:-}" \
+        '.workspaces[] | select(.id == $id or .ref == $id) | .description // empty')
+    fi
     [[ $stamp == cw:* ]] || die "not inside a git worktree"
     wt=${stamp#cw:}
     [[ ! -e $wt ]] || die "$wt exists but is not a git worktree — inspect it by hand"

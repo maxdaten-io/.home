@@ -272,6 +272,18 @@ const sq = (p) => "'" + p.replaceAll("'", "'\\''") + "'";
 // Right-click menu. Structure is fixed per row (rows are keyed, the template
 // runs once), so session-only items are left out of the main row, and items
 // whose data comes and goes (PR, unread) bind their labels live instead.
+// "Done" for a worktree session: `cw done <path>` in a new split of its
+// workspace (sidebars can't run commands; typed input survives the devenv
+// hook, which replays it). On success cw closes the workspace, split and all;
+// on refusal (unsaved work, unpushed commits, claude still running) the split
+// stays open with the reason.
+function done(r, a) {
+  const w = r().w;
+  const src = a()?.surfaceId ?? (w?.tabs ?? [])[0]?.surfaceId;
+  if (!w || !src) return;
+  cmux("surface.split", { workspace_id: w.id, surface_id: src, direction: "down", focus: true, initial_input: "cw done " + sq(r().path) + "\r" });
+}
+
 function rowMenu(r, a, isMain) {
   const w = () => r().w;
   const pr = () => w()?.pr;
@@ -306,7 +318,9 @@ function rowMenu(r, a, isMain) {
   // The main checkout is meant to stay; sessions are disposable. (Closing a
   // worktree session's workspace keeps the worktree: `cw done` removes both.)
   if (!isMain) {
-    items.push(Divider(), Button("Close Workspace", () => w() && cmux("workspace.close", { workspace_id: w().id })).destructive());
+    items.push(Divider());
+    if (!r().session) items.push(Button("Done — Remove Worktree", () => done(r, a))); // worktree rows; stable per key
+    items.push(Button("Close Workspace", () => w() && cmux("workspace.close", { workspace_id: w().id })).destructive());
   }
   return items;
 }

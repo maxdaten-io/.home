@@ -136,14 +136,14 @@ let
       assert_output --regexp "23% [0-9]+d"
       assert_output --regexp "5% [0-9]+d"
       # Context window
-      assert_output --partial "ctx 28%"
-      assert_output --partial "10K/200K"
+      assert_output --partial "███░░░░░░░ 28%"
+      refute_output --partial "10K"
     }
 
     @test "render: no rate_limits degrades gracefully" {
       run ${render} '${noRateLimitsJson}'
       assert_success
-      assert_output --partial "ctx 28%"
+      assert_output --partial "███░░░░░░░ 28%"
       refute_output --partial "5h"
       refute_output --partial "7d"
     }
@@ -151,9 +151,8 @@ let
     @test "render: fallback without context_window_size" {
       run ${render} '${noCtxSizeJson}'
       assert_success
-      assert_output --partial "72%"
-      assert_output --partial "10K"
-      refute_output --partial "ctx"
+      assert_output --partial "███░░░░░░░ 28%"
+      refute_output --partial "10K"
     }
 
     @test "render: empty JSON does not crash" {

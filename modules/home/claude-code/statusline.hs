@@ -11,7 +11,6 @@ import Data.Maybe (catMaybes, fromMaybe, isJust)
 import Data.Time.Clock (NominalDiffTime, UTCTime, diffUTCTime, getCurrentTime)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import GHC.Generics (Generic)
-import Numeric (showFFloat)
 import System.Console.Terminal.Size (hSize, width)
 import System.Environment (getEnvironment, lookupEnv)
 import System.Exit (ExitCode (..))
@@ -39,9 +38,6 @@ instance FromJSON WorkspaceInfo
 
 data ContextWindow = ContextWindow
     { remaining_percentage :: Maybe Double
-    , total_input_tokens :: Maybe Int
-    , total_output_tokens :: Maybe Int
-    , context_window_size :: Maybe Int
     }
     deriving (Generic)
 instance FromJSON ContextWindow
@@ -64,12 +60,6 @@ emptyInput :: StatusInput
 emptyInput = StatusInput Nothing Nothing Nothing Nothing
 
 ----------------------- Formatting --------------------------
-
-formatTokens :: Int -> String
-formatTokens n
-    | n >= 1000000 = showFFloat (Just 1) (fromIntegral n / 1000000 :: Double) "M"
-    | n >= 1000 = show (n `div` 1000) ++ "K"
-    | otherwise = show n
 
 formatCountdown :: NominalDiffTime -> String
 formatCountdown dt
@@ -111,13 +101,40 @@ toUsageInfo (RateLimits mFive mSeven) =
 
 ------------------- Nerd font icons -------------------------
 
-iconNix, iconFolder, iconRocket, iconBattery, iconCalendar, iconBrain :: Char
+iconNix, iconFolder, iconRocket, iconBattery, iconCalendar, iconDatabase :: Char
 iconNix = '\xF313' -- nf-linux-nixos
 iconFolder = '\xF07B' -- nf-fa-folder
 iconRocket = '\xF135' -- nf-fa-rocket
 iconBattery = '\xF0079' -- nf-md-battery_50
 iconCalendar = '\xF051B' -- nf-md-calendar_clock
-iconBrain = '\xF02A0' -- nf-md-brain
+iconDatabase = '\xF01BC' -- nf-md-database
+
+---------------------- Context bar --------------------------
+
+{- | 10-cell bar of used context, e.g. used=10 -> "█░░░░░░░░░ 10%".
+  Raw 24-bit ANSI fg escapes; starship passes env values through verbatim.
+  Bg stays whatever the CLAUDE_CTX segment sets (color_bg3).
+-}
+ctxBar :: Int -> String
+ctxBar used =
+    fg fill (replicate n '█')
+        ++ fg empty (replicate (10 - n) '░')
+        ++ fg fg0 (" " ++ show used ++ "%")
+  where
+    n = max 0 (min 10 ((used + 5) `div` 10)) -- round half up, clamp
+    fill
+        | used <= 10 = green
+        | used <= 75 = grey
+        | used <= 80 = yellow
+        | otherwise = red
+    fg (r, g, b) str = "\ESC[38;2;" ++ show r ++ ";" ++ show g ++ ";" ++ show b ++ "m" ++ str
+    -- Atelier Cave palette (modules/home/_palette.nix)
+    fg0 = (0xef, 0xec, 0xf4) :: (Int, Int, Int)
+    green = (0x2a, 0x92, 0x92)
+    grey = (0xc5, 0xc1, 0xcb) -- lighter than color_text_dim; must read on color_bg3
+    empty = (0x8b, 0x87, 0x92) -- color_text_dim
+    yellow = (0xa0, 0x6e, 0x3b)
+    red = (0xbe, 0x46, 0x78)
 
 -------------------- Terminal width -------------------------
 
@@ -157,9 +174,6 @@ main = do
         mdl = maybe "" display_name (model si)
         mCtx = context_window si
         ctxPct = remaining_percentage =<< mCtx
-        inTok = fromMaybe 0 (total_input_tokens =<< mCtx)
-        outTok = fromMaybe 0 (total_output_tokens =<< mCtx)
-        ctxMax = fromMaybe 0 (context_window_size =<< mCtx)
 
     -- Git: just a boolean check — Starship handles branch/status rendering
     hasGit <- if null cwd then pure False else isGitRepo cwd
@@ -184,28 +198,7 @@ main = do
             (Nothing, Just u7) -> Just $ [iconCalendar] ++ " " ++ fmtPct u7 ++ fmtReset (sevenDayReset usage)
             (Just u5, Just u7) -> Just $ [iconBattery] ++ " " ++ fmtPct u5 ++ fmtReset (fiveHourReset usage) ++ " " ++ [iconCalendar] ++ " " ++ fmtPct u7 ++ fmtReset (sevenDayReset usage)
 
-        totalTok = inTok + outTok
-        ctxStr = case ctxPct of
-            Nothing -> Nothing
-            Just p
-                | ctxMax > 0 ->
-                    let usedPct = 100 - round p :: Int
-                     in Just $
-                            [iconBrain]
-                                ++ " ctx "
-                                ++ show usedPct
-                                ++ "% "
-                                ++ formatTokens totalTok
-                                ++ "/"
-                                ++ formatTokens ctxMax
-                | totalTok > 0 ->
-                    Just $
-                        [iconBrain, ' ']
-                            ++ show (round p :: Int)
-                            ++ "% "
-                            ++ formatTokens totalTok
-                | otherwise ->
-                    Just $ [iconBrain, ' '] ++ show (round p :: Int) ++ "%"
+        ctxStr = fmap (\p -> [iconDatabase, ' '] ++ ctxBar (100 - round p)) ctxPct
 
         hasUsage = isJust usageStr
         hasDark = isJust ctxStr
