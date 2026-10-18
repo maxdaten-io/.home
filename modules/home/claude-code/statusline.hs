@@ -159,6 +159,8 @@ ctxBar used =
 
 {- | Detect terminal width: COLUMNS env var > /dev/tty query > fallback 120.
   stdout is a pipe when Claude Code invokes us, so we open /dev/tty directly.
+  Claude Code's statusline area is narrower than the tty (its own padding);
+  starship's $fill pads to exactly what we pass, so overshoot gets cut to "…".
 -}
 getTerminalWidth :: IO String
 getTerminalWidth = do
@@ -171,7 +173,8 @@ getTerminalWidth = do
         h <- openFile "/dev/tty" ReadMode
         mSize <- hSize h
         hClose h
-        pure $ maybe "120" (show . subtract 5 . width) mSize
+        pure $ maybe "120" (show . subtract ttyMargin . width) mSize
+    ttyMargin = 12 -- was 5: cut the last ~7 cells (" 28%" + cap) at 2026-10
 
 ----------------------- Statusline --------------------------
 
