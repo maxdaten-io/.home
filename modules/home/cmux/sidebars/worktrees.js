@@ -393,7 +393,7 @@ function worktreeRow(e) {
   // group header has the icon.
   const lead = isMain()
     ? HStack({ spacing: 6 }, [
-        icon(NF.console, 13).color(() => (r().w ? "secondary" : "tertiary")).frame({ width: 14 }),
+        icon(NF.console, 13).color(() => (r().w ? "secondary" : "tertiary")), // natural width: md glyphs run wider than 1em and a fixed frame clips them
         Text(() => NF.branch + (branch() ? " " + branch() : "") + (dirty() ? " !" : ""))
           .font(11).weight("medium").color(PAL.fg0)
           .paddingHorizontal(5).paddingVertical(1).background(GIT).cornerRadius(4)
