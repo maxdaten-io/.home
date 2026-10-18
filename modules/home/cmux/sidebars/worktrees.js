@@ -21,19 +21,60 @@
 
 const WORK = "/Developer/frontrow/";
 const PER_GROUP = 5;
+// Atelier Cave, the terminal palette (modules/home/_palette.nix; text_dim is
+// starship's extension). Copied, not generated: this file is symlinked
+// out-of-store so edits hot-reload. Contrast on bg1 #19171c: aqua/green 4.8,
+// purple 4.2, yellow 4.1, blue 3.9, red 3.7, orange 3.5, text_dim 5.1 — all
+// clear the 3:1 icon bar; bg3 (2.9) is only used for hairlines.
+const PAL = {
+  fg0: "#efecf4",
+  text_dim: "#8b8792",
+  bg3: "#655f6d",
+  blue: "#576ddb",
+  aqua: "#398bc6",
+  green: "#2a9292",
+  orange: "#aa573c",
+  purple: "#955ae7",
+  red: "#be4678",
+  yellow: "#a06e3b",
+};
+// Nerd Font Material Design glyphs (codepoints read from JetBrainsMono Nerd
+// Font's cmap). The sidebar can't pick a font family — .font() takes sizes and
+// text styles only — so these draw via CoreText fallback to the installed Nerd
+// Fonts. That works for the md range (U+F0001+) and FontAwesome, but Octicons
+// and Devicons (U+F4xx, U+E7xx) render as tofu: stay in md.
+const NF = {
+  briefcase: "\u{F00D6}",
+  home: "\u{F02DC}",
+  folder: "\u{F024B}",
+  folderOpen: "\u{F0770}",
+  branch: "\u{F062C}",
+  robot: "\u{F06A9}",
+  alert: "\u{F0362}",
+  bolt: "\u{F140B}",
+  sleep: "\u{F04B2}",
+  pencil: "\u{F03EB}",
+  pull: "\u{F04C2}",
+  chevron: "\u{F0142}",
+  dots: "\u{F01D8}",
+  pin: "\u{F0403}",
+};
+const icon = (glyph, size) => Text(glyph).font(size).lineLimit(1).fixedSize();
+
 const STATUS = {
-  needs_input: { color: "#E8912D", rank: 0, word: "needs input", icon: "exclamationmark.bubble.fill" },
-  working: { color: "#4C9EEB", rank: 1, word: "working", icon: "bolt.fill" },
-  idle: { color: "#8E8E93", rank: 2, word: "", icon: "moon.zzz.fill" },
+  needs_input: { color: PAL.orange, rank: 0, word: "needs input", icon: NF.alert },
+  working: { color: PAL.blue, rank: 1, word: "working", icon: NF.bolt },
+  idle: { color: PAL.text_dim, rank: 2, word: "", icon: NF.sleep },
 };
 // Section identity, repeated on its repos' folder icons so a repo row says
 // which account it belongs to even when the section header is scrolled away.
 const SECTION = {
-  WORK: { color: "#2BB3A3", icon: "briefcase.fill" },
-  PRIVATE: { color: "#A678E8", icon: "house.fill" },
+  WORK: { color: PAL.aqua, icon: NF.briefcase },
+  PRIVATE: { color: PAL.purple, icon: NF.home },
 };
-const CLAUDE = "#D97757";
-const DIRTY = "#E5C07B";
+const CLAUDE = PAL.red;
+const DIRTY = PAL.yellow;
+const PR = PAL.green;
 const GROUPS = [
   ["needs_input", "needs input"],
   ["working", "working"],
@@ -186,13 +227,12 @@ function jump(w, a) {
 function dotsView(statusesFn) {
   return ForEach(
     { items: () => statusesFn().map((s, i) => ({ id: i + ":" + s, s })), key: (d) => d.id },
-    (d) => Circle({ size: 5 }).fill(() => STATUS[d().s]?.color ?? "#7f7f7f66"),
+    (d) => Circle({ size: 5 }).fill(() => STATUS[d().s]?.color ?? PAL.text_dim + "66"),
   );
 }
 
 function chevron(key) {
-  return Image("chevron.right")
-    .font(9).weight("semibold").color("tertiary")
+  return icon(NF.chevron, 11).color("tertiary")
     .rotation(() => (tick(), collapsed.has(key()) ? 0 : 90))
     .frame({ width: 12, height: 14 });
 }
@@ -208,7 +248,7 @@ function pill(textFn, color) {
 function sectionHeader(e) {
   const s = SECTION[e().label];
   return HStack({ spacing: 5 }, [
-    Image(s.icon).font(9).color(s.color),
+    icon(s.icon, 11).color(s.color),
     Text(() => e().label).font(10).weight("bold").color(s.color),
     Spacer(),
     // Collapsed: keep the alert shape visible (needs-input/working only).
@@ -227,7 +267,7 @@ function repoHeader(e) {
   const accent = SECTION[e().section].color;
   const header = HStack({ spacing: 6 }, [
     chevron(() => e().ck),
-    Image("folder.fill").font(11).color(accent),
+    Text(() => (tick(), collapsed.has(e().ck) ? NF.folder : NF.folderOpen)).font(13).lineLimit(1).fixedSize().color(accent),
     Text(() => base(e().root)).font(12).weight("semibold").lineLimit(1).truncation("tail"),
     Spacer(),
     dotsView(() => e().dots),
@@ -236,17 +276,17 @@ function repoHeader(e) {
     .paddingTrailing(10)
     .paddingVertical(5)
     .cornerRadius(7)
-    .hoverBackground("#7f7f7f1c")
+    .hoverBackground(PAL.text_dim + "1c")
     .frame({ maxWidth: "infinity" })
     .onTap(() => flip(collapsed, e().ck));
   // Breathing room + hairline between repos; the first one hugs its section.
   if (e().first) return header.paddingTop(2);
-  return VStack({ spacing: 8, alignment: "leading" }, [Rectangle().fill("#7f7f7f40").frame({ maxWidth: "infinity", height: 1 }).paddingHorizontal(8), header]).paddingTop(10);
+  return VStack({ spacing: 8, alignment: "leading" }, [Rectangle().fill(PAL.bg3 + "66").frame({ maxWidth: "infinity", height: 1 }).paddingHorizontal(8), header]).paddingTop(10);
 }
 
 function subHeader(e) {
   return HStack({ spacing: 5 }, [
-    Image("sparkles").font(9).color(CLAUDE),
+    icon(NF.robot, 11).color(CLAUDE),
     Text(() => e().label).font(10).weight("semibold").color("tertiary"),
     pill(() => String(e().count), CLAUDE),
     Spacer(),
@@ -261,7 +301,7 @@ function groupHeader(e) {
   const st = STATUS[e().status];
   return HStack({ spacing: 5 }, [
     chevron(() => e().key),
-    Image(st.icon).font(9).color(st.color).frame({ width: 12 }),
+    icon(st.icon, 11).color(st.color).frame({ width: 14 }),
     Text(() => e().word).font(11).weight("medium").color(e().status === "idle" ? "secondary" : st.color),
     pill(() => String(e().count), st.color),
     Spacer(),
@@ -270,7 +310,7 @@ function groupHeader(e) {
     .paddingTrailing(10)
     .paddingVertical(2)
     .cornerRadius(7)
-    .hoverBackground("#7f7f7f1c")
+    .hoverBackground(PAL.text_dim + "1c")
     .frame({ maxWidth: "infinity" })
     .onTap(() => flip(collapsed, e().key));
 }
@@ -278,17 +318,17 @@ function groupHeader(e) {
 function pinnedRow(e) {
   const w = () => e().w;
   return HStack({ spacing: 6 }, [
-    Image("pin.fill").font(8).color("tertiary"),
+    icon(NF.pin, 11).color("tertiary"),
     Text(() => w().title).font(12).lineLimit(1).truncation("tail")
       .color(() => (w().selected ? "primary" : "secondary")),
     Spacer(),
-    Text(() => (w().unread > 0 ? String(w().unread) : "")).font(10).bold().color("#E4573D"),
+    Text(() => (w().unread > 0 ? String(w().unread) : "")).font(10).bold().color(PAL.red),
   ])
     .paddingHorizontal(8)
     .paddingVertical(4)
     .cornerRadius(7)
-    .background(() => (w().selected ? "#7f7f7f3d" : null))
-    .hoverBackground("#7f7f7f24")
+    .background(() => (w().selected ? PAL.text_dim + "3d" : null))
+    .hoverBackground(PAL.text_dim + "24")
     .frame({ maxWidth: "infinity" })
     .onTap(() => jump(w(), null));
 }
@@ -308,8 +348,8 @@ function worktreeRow(e) {
   // Main checkout: a house (dimmed without a workspace), tinted by its agent if
   // one runs there. Sessions: the plain status dot, the group header has the icon.
   const lead = isMain()
-    ? Image("house.fill").font(9).color(() => STATUS[a()?.status]?.color ?? (r().w ? "secondary" : "tertiary")).frame({ width: 12 })
-    : Circle({ size: 7 }).fill(() => STATUS[a()?.status]?.color ?? "#7f7f7f55").frame({ width: 12 });
+    ? icon(NF.branch, 12).color(() => STATUS[a()?.status]?.color ?? (r().w ? "secondary" : "tertiary")).frame({ width: 14 })
+    : Circle({ size: 7 }).fill(() => STATUS[a()?.status]?.color ?? PAL.bg3).frame({ width: 14 });
   const time = () => {
     const s = a()?.status;
     if ((s === "working" || s === "needs_input") && a().sinceEpoch) return fmtAge(nowSecs() - secs(a().sinceEpoch));
@@ -331,13 +371,13 @@ function worktreeRow(e) {
       Text(name).font(13).lineLimit(1).truncation(e().row.session ? "tail" : "middle") // titles read left to right, paths at both ends
         .weight(() => (selected() ? "semibold" : "regular"))
         .color(() => (selected() ? "primary" : r().w ? "secondary" : "tertiary")),
-      Image("pencil").font(9).color(DIRTY).opacity(() => (dirty() ? 1 : 0))
+      icon(NF.pencil, 11).color(DIRTY).opacity(() => (dirty() ? 1 : 0))
         .frame(() => ({ width: dirty() ? 10 : 0 })),
       Spacer({ minLength: 4 }),
       // Badges keep their width; the name truncates instead (docs: priority 2).
-      Text(() => (r().w?.pr ? "#" + r().w.pr.number : "")).font(10).weight("semibold").color("#3FB950")
+      Text(() => (r().w?.pr ? NF.pull + " " + r().w.pr.number : "")).font(10).weight("semibold").color(PR)
         .paddingHorizontal(() => (r().w?.pr ? 5 : 0))
-        .background(() => (r().w?.pr ? "#3FB95026" : null)).cornerRadius(6)
+        .background(() => (r().w?.pr ? PR + "26" : null)).cornerRadius(6)
         .lineLimit(1).fixedSize("horizontal").layoutPriority(2)
         .onTap(() => r().w?.pr && openURL(r().w.pr.url)),
       Text(time).font(10).monospaced().color(() => (needs() ? STATUS.needs_input.color : "tertiary"))
@@ -355,13 +395,13 @@ function worktreeRow(e) {
 
   // Leading accent bar: orange while the session waits on you, accent when selected.
   return HStack({ spacing: 0 }, [
-    Capsule().fill(() => (needs() ? STATUS.needs_input.color : selected() ? "accent" : "clear")).frame({ width: 3, height: 18 }),
+    Capsule().fill(() => (needs() ? STATUS.needs_input.color : selected() ? PAL.purple : "clear")).frame({ width: 3, height: 18 }),
     body,
   ])
     .marginLeading(e().nested ? 26 : 12) // stable per key, like kind
     .cornerRadius(7)
-    .background(() => (selected() ? "#7f7f7f3d" : needs() ? "#E8912D1A" : null))
-    .hoverBackground(() => (selected() ? "#7f7f7f3d" : "#7f7f7f24"))
+    .background(() => (selected() ? PAL.text_dim + "3d" : needs() ? PAL.orange + "1F" : null))
+    .hoverBackground(() => (selected() ? PAL.text_dim + "3d" : PAL.text_dim + "24"))
     .frame({ maxWidth: "infinity" })
     .onTap(() => jump(r().w, a()))
     .contextMenu([
@@ -372,7 +412,7 @@ function worktreeRow(e) {
 
 function moreRow(e) {
   return HStack({ spacing: 4 }, [
-    Image("ellipsis").font(9).color("tertiary"),
+    icon(NF.dots, 11).color("tertiary"),
     Text(() => (tick(), expanded.has(e().listKey) ? "show fewer" : "+" + e().hidden + " older")).font(11).color("tertiary"),
   ])
     .paddingLeading(47)
