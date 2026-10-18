@@ -22,10 +22,18 @@
 const WORK = "/Developer/frontrow/";
 const PER_GROUP = 5;
 const STATUS = {
-  needs_input: { color: "#E8912D", rank: 0, word: "needs input" },
-  working: { color: "#4C9EEB", rank: 1, word: "working" },
-  idle: { color: "#8E8E93", rank: 2, word: "" },
+  needs_input: { color: "#E8912D", rank: 0, word: "needs input", icon: "exclamationmark.bubble.fill" },
+  working: { color: "#4C9EEB", rank: 1, word: "working", icon: "bolt.fill" },
+  idle: { color: "#8E8E93", rank: 2, word: "", icon: "moon.zzz.fill" },
 };
+// Section identity, repeated on its repos' folder icons so a repo row says
+// which account it belongs to even when the section header is scrolled away.
+const SECTION = {
+  WORK: { color: "#2BB3A3", icon: "briefcase.fill" },
+  PRIVATE: { color: "#A678E8", icon: "house.fill" },
+};
+const CLAUDE = "#D97757";
+const DIRTY = "#E5C07B";
 const GROUPS = [
   ["needs_input", "needs input"],
   ["working", "working"],
@@ -129,7 +137,7 @@ const entries = computed(() => {
 
     const secKey = "s:" + label;
     const dots = (rs) => rs.filter((r) => r.agent).map((r) => r.agent.status);
-    out.push({ kind: "section", key: secKey, label, dots: dots([...repos.values()].flat()) });
+    out.push({ kind: "section", key: secKey, label, first: !out.length, dots: dots([...repos.values()].flat()) });
     if (collapsed.has(secKey)) continue;
 
     for (const w of pinned) out.push({ kind: "pinned", key: "p:" + w.id, w });
@@ -137,9 +145,11 @@ const entries = computed(() => {
     const ordered = [...repos.entries()]
       .map(([root, rs]) => [root, rs.sort((x, y) => y.at - x.at)])
       .sort((x, y) => y[1][0].at - x[1][0].at);
-    for (const [root, rs] of ordered) {
+    for (const [i, [root, rs]] of ordered.entries()) {
       const repoKey = "r:" + root;
-      out.push({ kind: "repo", key: repoKey, root, dots: dots(rs) });
+      // `first` and `section` are part of the key's identity: a repo never
+      // changes section, and the first-repo spacing only shifts on reorder.
+      out.push({ kind: "repo", key: repoKey + (i ? "" : ":first"), ck: repoKey, root, section: label, first: !i, dots: dots(rs) });
       if (collapsed.has(repoKey)) continue;
 
       // No workspace at the root: still listed, dimmed, so the repo has an anchor.
@@ -148,7 +158,7 @@ const entries = computed(() => {
 
       const sessions = rs.filter((r) => r.path !== root || r.session);
       if (!sessions.length) continue;
-      out.push({ kind: "sub", key: "c:" + root, label: "claude sessions" });
+      out.push({ kind: "sub", key: "c:" + root, label: "claude sessions", count: sessions.length });
       for (const [status, word] of GROUPS) {
         const g = sessions.filter((r) => groupOf(r) === status);
         if (!g.length) continue;
@@ -187,51 +197,73 @@ function chevron(key) {
     .frame({ width: 12, height: 14 });
 }
 
+// Small rounded count pill, tinted like its context.
+function pill(textFn, color) {
+  return Text(textFn).font(9).weight("semibold").monospaced().color(color)
+    .paddingHorizontal(5).paddingVertical(1)
+    .background(color + "26").cornerRadius(6)
+    .lineLimit(1).fixedSize("horizontal").layoutPriority(2);
+}
+
 function sectionHeader(e) {
-  return HStack({ spacing: 4 }, [
-    Text(() => e().label).font(10).weight("bold").color("tertiary"),
+  const s = SECTION[e().label];
+  return HStack({ spacing: 5 }, [
+    Image(s.icon).font(9).color(s.color),
+    Text(() => e().label).font(10).weight("bold").color(s.color),
     Spacer(),
     // Collapsed: keep the alert shape visible (needs-input/working only).
     dotsView(() => (collapsed.has(e().key) ? e().dots.filter((s) => s !== "idle") : [])),
+    chevron(() => e().key),
   ])
     .paddingHorizontal(8)
-    .paddingTop(10)
-    .paddingBottom(2)
+    .paddingTop(e().first ? 8 : 18)
+    .paddingBottom(4)
     .frame({ maxWidth: "infinity" })
     .cursor("pointer")
     .onTap(() => flip(collapsed, e().key));
 }
 
 function repoHeader(e) {
-  return HStack({ spacing: 6 }, [
-    chevron(() => e().key),
+  const accent = SECTION[e().section].color;
+  const header = HStack({ spacing: 6 }, [
+    chevron(() => e().ck),
+    Image("folder.fill").font(11).color(accent),
     Text(() => base(e().root)).font(12).weight("semibold").lineLimit(1).truncation("tail"),
     Spacer(),
     dotsView(() => e().dots),
   ])
     .paddingLeading(6)
     .paddingTrailing(10)
-    .paddingVertical(4)
+    .paddingVertical(5)
     .cornerRadius(7)
     .hoverBackground("#7f7f7f1c")
     .frame({ maxWidth: "infinity" })
-    .onTap(() => flip(collapsed, e().key));
+    .onTap(() => flip(collapsed, e().ck));
+  // Breathing room + hairline between repos; the first one hugs its section.
+  if (e().first) return header.paddingTop(2);
+  return VStack({ spacing: 8, alignment: "leading" }, [Rectangle().fill("#7f7f7f40").frame({ maxWidth: "infinity", height: 1 }).paddingHorizontal(8), header]).paddingTop(10);
 }
 
 function subHeader(e) {
-  return Text(() => e().label)
-    .font(10).weight("semibold").color("tertiary")
-    .paddingLeading(22)
-    .paddingTop(4)
-    .frame({ maxWidth: "infinity", alignment: "leading" });
+  return HStack({ spacing: 5 }, [
+    Image("sparkles").font(9).color(CLAUDE),
+    Text(() => e().label).font(10).weight("semibold").color("tertiary"),
+    pill(() => String(e().count), CLAUDE),
+    Spacer(),
+  ])
+    .paddingLeading(24)
+    .paddingTop(6)
+    .paddingBottom(1)
+    .frame({ maxWidth: "infinity" });
 }
 
 function groupHeader(e) {
+  const st = STATUS[e().status];
   return HStack({ spacing: 5 }, [
     chevron(() => e().key),
-    Circle({ size: 5 }).fill(() => STATUS[e().status]?.color ?? "#7f7f7f66"),
-    Text(() => e().word).font(11).color(() => (e().status === "needs_input" ? "#E8912D" : "secondary")),
-    Text(() => String(e().count)).font(10).monospaced().color("tertiary"),
+    Image(st.icon).font(9).color(st.color).frame({ width: 12 }),
+    Text(() => e().word).font(11).weight("medium").color(e().status === "idle" ? "secondary" : st.color),
+    pill(() => String(e().count), st.color),
     Spacer(),
   ])
     .paddingLeading(20)
@@ -269,12 +301,19 @@ function worktreeRow(e) {
     const branch = r().tab?.branch ?? (isMain() ? r().w?.branch : null);
     const dirty = r().tab?.dirty ?? (isMain() && r().w?.dirty);
     const label = isMain() ? (branch ? branch + " (main checkout)" : "main checkout") : r().session ? r().w.title || base(r().path) : base(r().path);
-    return label + (dirty ? "*" : "") + (r().others ? "  +" + r().others : "");
+    return label + (r().others ? "  +" + r().others : "");
   };
+  const dirty = () => !!(r().tab?.dirty ?? (isMain() && r().w?.dirty));
+  const needs = () => a()?.status === "needs_input";
+  // Main checkout: a house (dimmed without a workspace), tinted by its agent if
+  // one runs there. Sessions: the plain status dot, the group header has the icon.
+  const lead = isMain()
+    ? Image("house.fill").font(9).color(() => STATUS[a()?.status]?.color ?? (r().w ? "secondary" : "tertiary")).frame({ width: 12 })
+    : Circle({ size: 7 }).fill(() => STATUS[a()?.status]?.color ?? "#7f7f7f55").frame({ width: 12 });
   const time = () => {
     const s = a()?.status;
     if ((s === "working" || s === "needs_input") && a().sinceEpoch) return fmtAge(nowSecs() - secs(a().sinceEpoch));
-    return r().at ? fmtAge(nowSecs() - r().at) + " ago" : "";
+    return r().at ? fmtAge(nowSecs() - r().at) : "";
   };
   // Line 2 is the identity: what this session was asked to do. Nested rows
   // drop the status word, their group header already says it.
@@ -286,30 +325,42 @@ function worktreeRow(e) {
   };
   const selected = () => !!r().w?.selected;
 
-  return VStack({ spacing: 1, alignment: "leading" }, [
+  const body = VStack({ spacing: 1, alignment: "leading" }, [
     HStack({ spacing: 6 }, [
-      Circle({ size: 7 }).fill(() => STATUS[a()?.status]?.color ?? "clear"),
+      lead,
       Text(name).font(13).lineLimit(1).truncation(e().row.session ? "tail" : "middle") // titles read left to right, paths at both ends
+        .weight(() => (selected() ? "semibold" : "regular"))
         .color(() => (selected() ? "primary" : r().w ? "secondary" : "tertiary")),
+      Image("pencil").font(9).color(DIRTY).opacity(() => (dirty() ? 1 : 0))
+        .frame(() => ({ width: dirty() ? 10 : 0 })),
       Spacer({ minLength: 4 }),
       // Badges keep their width; the name truncates instead (docs: priority 2).
-      Text(() => (r().w?.pr ? "#" + r().w.pr.number : "")).font(11).color("secondary")
+      Text(() => (r().w?.pr ? "#" + r().w.pr.number : "")).font(10).weight("semibold").color("#3FB950")
+        .paddingHorizontal(() => (r().w?.pr ? 5 : 0))
+        .background(() => (r().w?.pr ? "#3FB95026" : null)).cornerRadius(6)
         .lineLimit(1).fixedSize("horizontal").layoutPriority(2)
         .onTap(() => r().w?.pr && openURL(r().w.pr.url)),
-      Text(time).font(10).monospaced().color("tertiary")
+      Text(time).font(10).monospaced().color(() => (needs() ? STATUS.needs_input.color : "tertiary"))
         .lineLimit(1).fixedSize("horizontal").layoutPriority(2),
     ]),
     Text(detail)
       .font(11).lineLimit(1).truncation("tail")
-      .color(() => (a()?.status === "needs_input" ? "#E8912D" : "tertiary"))
-      .paddingLeading(13)
+      .color(() => (needs() ? STATUS.needs_input.color : "tertiary"))
+      .paddingLeading(18)
       .frame(() => ({ maxWidth: "infinity", height: detail() ? 15 : 0 })),
   ])
     .paddingHorizontal(8)
     .paddingVertical(4)
+    .frame({ maxWidth: "infinity" });
+
+  // Leading accent bar: orange while the session waits on you, accent when selected.
+  return HStack({ spacing: 0 }, [
+    Capsule().fill(() => (needs() ? STATUS.needs_input.color : selected() ? "accent" : "clear")).frame({ width: 3, height: 18 }),
+    body,
+  ])
     .marginLeading(e().nested ? 26 : 12) // stable per key, like kind
     .cornerRadius(7)
-    .background(() => (selected() ? "#7f7f7f3d" : null))
+    .background(() => (selected() ? "#7f7f7f3d" : needs() ? "#E8912D1A" : null))
     .hoverBackground(() => (selected() ? "#7f7f7f3d" : "#7f7f7f24"))
     .frame({ maxWidth: "infinity" })
     .onTap(() => jump(r().w, a()))
@@ -320,8 +371,10 @@ function worktreeRow(e) {
 }
 
 function moreRow(e) {
-  return Text(() => (tick(), expanded.has(e().listKey) ? "show fewer" : "+" + e().hidden + " older"))
-    .font(11).color("tertiary")
+  return HStack({ spacing: 4 }, [
+    Image("ellipsis").font(9).color("tertiary"),
+    Text(() => (tick(), expanded.has(e().listKey) ? "show fewer" : "+" + e().hidden + " older")).font(11).color("tertiary"),
+  ])
     .paddingLeading(47)
     .paddingVertical(2)
     .frame({ maxWidth: "infinity", alignment: "leading" })
