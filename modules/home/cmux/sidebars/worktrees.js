@@ -61,6 +61,7 @@ const NF = {
   pin: "\u{F0403}",
   console: "\u{F018D}",
   foldLess: "\u{F054E}",
+  plus: "\u{F0415}",
   foldMore: "\u{F054F}",
 };
 // The fallback font's advance is narrower than md glyph ink and Text clips at
@@ -143,6 +144,10 @@ function sessionName(w, a) {
 // order: live agents; stamped workspaces; other git workspaces. Several hits on
 // one key: the most urgent (then most recent) one represents it, `others`
 // counts the extra agents.
+// Workspaces whose worktree agent we've asked cmux to stamp, so the ~1s refresh
+// doesn't resend while the description round-trips.
+const stamping = new Set();
+
 function collectRows(ws) {
   const byKey = new Map();
   const hosted = new Set(); // workspaces already represented by a live agent's row
@@ -164,6 +169,13 @@ function collectRows(ws) {
       const atRoot = rootOf(path) === path;
       put(atRoot ? "s:" + w.id : path, path, w, a, secs(a.lastActivityAt ?? a.sinceEpoch ?? 0), atRoot);
       hosted.add(w.id);
+      // A bare `claude -w` (the sidebar's worktree spawn, or by hand) leaves its
+      // workspace unstamped: stamp it like `cw new` would, so cw done / "Done"
+      // can close it. Never over an existing description.
+      if (!atRoot && !w.description && !stamping.has(w.id)) {
+        stamping.add(w.id);
+        cmux("workspace.action", { action: "set_description", workspace_id: w.id, description: "cw:" + path });
+      }
     }
   }
   for (const w of ws) {
@@ -325,6 +337,14 @@ function rowMenu(r, a, isMain) {
   return items;
 }
 
+// New session workspace at the repo root, focused, claude typed in (survives
+// the devenv hook like any typed input). worktree: bare `claude -w`, which names
+// the worktree itself; collectRows stamps the workspace once the agent reports
+// where it runs. Account: the claude wrapper picks it from the cwd.
+function spawnSession(root, worktree) {
+  cmux("workspace.create", { cwd: root, title: base(root), focus: true, initial_input: (worktree ? "claude -w" : "claude") + "\r" });
+}
+
 function jump(w, a) {
   if (!w) return;
   cmux("workspace.select", { workspace_id: w.id });
@@ -391,22 +411,37 @@ function sectionHeader(e) {
     .frame({ maxWidth: "infinity" });
 }
 
+// Label folds the repo; the "+" beside it (a sibling tap target, like the
+// section's fold-all) spawns a session: tap = main checkout, right-click = pick.
 function repoHeader(e) {
   const accent = SECTION[e().section].color;
-  const header = HStack({ spacing: 6 }, [
+  const label = HStack({ spacing: 6 }, [
     chevron(() => e().ck),
     Text(() => (tick(), collapsed.has(e().ck) ? NF.folder : NF.folderOpen) + " ").font(13).lineLimit(1).fixedSize().color(accent),
     Text(() => base(e().root)).font(12).weight("semibold").lineLimit(1).truncation("tail"),
     Spacer(),
     dotsView(() => e().dots),
   ])
+    .frame({ maxWidth: "infinity" })
+    .cursor("pointer")
+    .onTap(() => flip(collapsed, e().ck));
+  const plus = icon(NF.plus, 12).color("tertiary")
+    .paddingHorizontal(3)
+    .cornerRadius(4)
+    .hoverBackground(PAL.text_dim + "24")
+    .cursor("pointer")
+    .onTap(() => spawnSession(e().root, false))
+    .contextMenu([
+      Button("New Session", () => spawnSession(e().root, false)),
+      Button("New Worktree Session", () => spawnSession(e().root, true)),
+    ]);
+  const header = HStack({ spacing: 4 }, [label, plus])
     .paddingLeading(6)
-    .paddingTrailing(10)
+    .paddingTrailing(8)
     .paddingVertical(5)
     .cornerRadius(7)
     .hoverBackground(PAL.text_dim + "1c")
-    .frame({ maxWidth: "infinity" })
-    .onTap(() => flip(collapsed, e().ck));
+    .frame({ maxWidth: "infinity" });
   // Breathing room + hairline between repos; the first one hugs its section.
   if (e().first) return header.paddingTop(2);
   return VStack({ spacing: 8, alignment: "leading" }, [Rectangle().fill(PAL.bg3 + "66").frame({ maxWidth: "infinity", height: 1 }).paddingHorizontal(8), header]).paddingTop(10);
