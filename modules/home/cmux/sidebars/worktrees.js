@@ -67,35 +67,39 @@ function promptOf(w, a) {
 }
 
 // --- model ---------------------------------------------------------------------
-// One row per path. Sources, in order: live agents; `cw new` workspaces whose
+// One row per worktree path, plus one per workspace for agents running in a
+// main checkout (those share the root path, but each is its own session, named
+// by workspace title). Sources, in order: live agents; `cw new` workspaces whose
 // agent isn't (or no longer) running; plain git workspaces (main checkouts, or
-// a worktree opened by hand). Several hits on one path: the most urgent (then
+// a worktree opened by hand). Several hits on one key: the most urgent (then
 // most recent) one represents it, `others` counts the extra agents.
 function collectRows(ws) {
-  const byPath = new Map();
-  const put = (path, w, agent, at) => {
-    const prev = byPath.get(path);
+  const byKey = new Map();
+  const put = (key, path, w, agent, at, session) => {
+    const prev = byKey.get(key);
     const better = !prev || rankOf(agent) < rankOf(prev.agent) || (rankOf(agent) === rankOf(prev.agent) && at > prev.at);
     const tab = (w.tabs ?? []).find((t) => t.directory === path && t.branch);
-    const row = better ? { path, root: rootOf(path), w, agent, at, tab, others: 0 } : prev;
+    const row = better ? { path, root: rootOf(path), w, agent, at, tab, session, others: 0 } : prev;
     row.at = Math.max(at, prev?.at ?? 0);
     row.others = (prev?.others ?? 0) + (prev?.agent && agent ? 1 : 0);
-    byPath.set(path, row);
+    byKey.set(key, row);
   };
   for (const w of ws) {
     if (w.pinned) continue; // triage views render separately
     for (const a of w.agents ?? []) {
       if (a.status === "ended") continue;
       const path = a.directory ?? stampOf(w) ?? w.directory ?? "";
-      if (path) put(path, w, a, secs(a.lastActivityAt ?? a.sinceEpoch ?? 0));
+      if (!path) continue;
+      const atRoot = rootOf(path) === path;
+      put(atRoot ? "s:" + w.id : path, path, w, a, secs(a.lastActivityAt ?? a.sinceEpoch ?? 0), atRoot);
     }
   }
   for (const w of ws) {
     if (w.pinned) continue;
-    const path = stampOf(w) ?? (isGit(w) ? w.directory : null);
-    if (path && !byPath.has(path)) put(path, w, null, secs(w.latestAt ?? 0));
+    const path = stampOf(w) ?? (isGit(w) || (w.agents ?? []).length ? w.directory : null);
+    if (path && !byKey.has(path)) put(path, path, w, null, secs(w.latestAt ?? 0), false);
   }
-  return [...byPath.values()];
+  return [...byKey.values()];
 }
 
 // Collapsed sections/repos/groups and expanded "+N older" lists, local to this view.
@@ -139,10 +143,10 @@ const entries = computed(() => {
       if (collapsed.has(repoKey)) continue;
 
       // No workspace at the root: still listed, dimmed, so the repo has an anchor.
-      const main = rs.find((r) => r.path === root) ?? { path: root, root, w: null, agent: null, at: 0, others: 0 };
+      const main = rs.find((r) => r.path === root && !r.session) ?? { path: root, root, w: null, agent: null, at: 0, others: 0 };
       out.push({ kind: "row", key: "w:" + root, row: main, nested: false });
 
-      const sessions = rs.filter((r) => r.path !== root);
+      const sessions = rs.filter((r) => r.path !== root || r.session);
       if (!sessions.length) continue;
       out.push({ kind: "sub", key: "c:" + root, label: "claude sessions" });
       for (const [status, word] of GROUPS) {
@@ -152,7 +156,7 @@ const entries = computed(() => {
         out.push({ kind: "group", key: groupKey, status, word, count: g.length });
         if (collapsed.has(groupKey)) continue;
         const shown = expanded.has(groupKey) ? g : g.slice(0, PER_GROUP);
-        for (const r of shown) out.push({ kind: "row", key: "w:" + r.path, row: r, nested: true });
+        for (const r of shown) out.push({ kind: "row", key: r.session ? "s:" + r.w.id : "w:" + r.path, row: r, nested: true });
         if (g.length > PER_GROUP) {
           out.push({ kind: "more", key: "m:" + groupKey, listKey: groupKey, hidden: g.length - PER_GROUP });
         }
@@ -260,11 +264,11 @@ function pinnedRow(e) {
 function worktreeRow(e) {
   const r = () => e().row;
   const a = () => r().agent;
-  const isMain = () => r().path === r().root;
+  const isMain = () => r().path === r().root && !r().session;
   const name = () => {
     const branch = r().tab?.branch ?? (isMain() ? r().w?.branch : null);
     const dirty = r().tab?.dirty ?? (isMain() && r().w?.dirty);
-    const label = isMain() ? (branch ? branch + " (main checkout)" : "main checkout") : base(r().path);
+    const label = isMain() ? (branch ? branch + " (main checkout)" : "main checkout") : r().session ? r().w.title || base(r().path) : base(r().path);
     return label + (dirty ? "*" : "") + (r().others ? "  +" + r().others : "");
   };
   const time = () => {
@@ -285,12 +289,15 @@ function worktreeRow(e) {
   return VStack({ spacing: 1, alignment: "leading" }, [
     HStack({ spacing: 6 }, [
       Circle({ size: 7 }).fill(() => STATUS[a()?.status]?.color ?? "clear"),
-      Text(name).font(13).lineLimit(1).truncation("middle")
+      Text(name).font(13).lineLimit(1).truncation(e().row.session ? "tail" : "middle") // titles read left to right, paths at both ends
         .color(() => (selected() ? "primary" : r().w ? "secondary" : "tertiary")),
       Spacer({ minLength: 4 }),
+      // Badges keep their width; the name truncates instead (docs: priority 2).
       Text(() => (r().w?.pr ? "#" + r().w.pr.number : "")).font(11).color("secondary")
+        .lineLimit(1).fixedSize("horizontal").layoutPriority(2)
         .onTap(() => r().w?.pr && openURL(r().w.pr.url)),
-      Text(time).font(10).monospaced().color("tertiary"),
+      Text(time).font(10).monospaced().color("tertiary")
+        .lineLimit(1).fixedSize("horizontal").layoutPriority(2),
     ]),
     Text(detail)
       .font(11).lineLimit(1).truncation("tail")
