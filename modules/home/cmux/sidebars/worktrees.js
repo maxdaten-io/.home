@@ -4,7 +4,7 @@
 //   WORK
 //     <repo>
 //       main checkout            the repo-root workspace (and its agent, if any)
-//       claude sessions
+//       sessions
 //         needs input / working / idle   collapsible; named worktrees, newest first
 //
 // Pinned workspaces (the `claude agents` triage views) sit on top of their
@@ -51,7 +51,7 @@ const NF = {
   // starship's git_branch symbol is Powerline U+E0A0, which draws as tofu here
   // (verified live); md source-branch is the closest glyph that renders.
   branch: "\u{F062C}",
-  robot: "\u{F06A9}",
+  forum: "\u{F028C}",
   alert: "\u{F0362}",
   bolt: "\u{F140B}",
   sleep: "\u{F04B2}",
@@ -213,7 +213,7 @@ const entries = computed(() => {
 
       const sessions = rs.filter((r) => r.path !== root || r.session);
       if (!sessions.length) continue;
-      out.push({ kind: "sub", key: "c:" + root, label: "claude sessions", count: sessions.length });
+      out.push({ kind: "sub", key: "c:" + root, label: "sessions", count: sessions.length });
       for (const [status, word] of GROUPS) {
         const g = sessions.filter((r) => groupOf(r) === status);
         if (!g.length) continue;
@@ -300,7 +300,7 @@ function repoHeader(e) {
 
 function subHeader(e) {
   return HStack({ spacing: 5 }, [
-    icon(NF.robot, 11).color(CLAUDE),
+    icon(NF.forum, 11).color(CLAUDE),
     Text(() => e().label).font(10).weight("semibold").color("tertiary"),
     pill(() => String(e().count), CLAUDE),
     Spacer(),
