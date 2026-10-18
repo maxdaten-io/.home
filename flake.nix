@@ -70,7 +70,12 @@
     # Pinned to a release tag rather than `main` so the installed version is a
     # real release, not whatever mid-cycle commit the last `just update` caught.
     # Bump deliberately: https://github.com/cachix/devenv/releases
-    devenv.url = "github:cachix/devenv/v2.4.0";
+    #
+    # TEMPORARY PIN: v2.4.0 + fix for cachix/devenv#3294 (`devenv shell`
+    # Ctrl-Alt-D/W/E dead under fish 4 / Claude Code, which enable the kitty
+    # keyboard protocol). Not in devenv.cachix, so devenv builds locally.
+    # Restore `github:cachix/devenv/<tag>` once a release contains the fix.
+    devenv.url = "github:MaxDaten/devenv/fix/shell-keybindings-csi-u";
 
     # Code formatting
     treefmt-nix.url = "github:numtide/treefmt-nix";

@@ -123,16 +123,16 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1790274448,
-        "narHash": "sha256-MCSbrGsgWXod/Qzk4v5tYO/fev1d5OcEGZ2vzVAvMfQ=",
-        "owner": "cachix",
+        "lastModified": 1792279058,
+        "narHash": "sha256-NRAeyWX93Ur1YXTxl0cpbapg3kluIZcj9h2Fsd3VCRY=",
+        "owner": "MaxDaten",
         "repo": "devenv",
-        "rev": "b904dcb51fe48c30db250038241507f60752f222",
+        "rev": "0a621732292cf0916d9c2273eb7ea26d769e6a75",
         "type": "github"
       },
       "original": {
-        "owner": "cachix",
-        "ref": "v2.4.0",
+        "owner": "MaxDaten",
+        "ref": "fix/shell-keybindings-csi-u",
         "repo": "devenv",
         "type": "github"
       }
