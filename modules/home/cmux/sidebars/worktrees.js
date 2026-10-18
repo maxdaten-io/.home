@@ -60,6 +60,8 @@ const NF = {
   dots: "\u{F01D8}",
   pin: "\u{F0403}",
   console: "\u{F018D}",
+  foldLess: "\u{F054E}",
+  foldMore: "\u{F054F}",
 };
 // The fallback font's advance is narrower than md glyph ink and Text clips at
 // its advance (right edge cut; padding/frame don't help, verified live). A
@@ -214,7 +216,8 @@ const entries = computed(() => {
 
     const secKey = "s:" + label;
     const dots = (rs) => rs.filter((r) => r.agent).map((r) => r.agent.status);
-    out.push({ kind: "section", key: secKey, label, first: !out.length, dots: dots([...repos.values()].flat()) });
+    const repoKeys = [...repos.keys()].map((root) => "r:" + root);
+    out.push({ kind: "section", key: secKey, label, first: !out.length, repoKeys, dots: dots([...repos.values()].flat()) });
     if (collapsed.has(secKey)) continue;
 
     for (const w of pinned) out.push({ kind: "pinned", key: "p:" + w.id, w });
@@ -290,9 +293,20 @@ function pill(textFn, color) {
     .lineLimit(1).fixedSize("horizontal").layoutPriority(2);
 }
 
+// Folds every repo of a section, or unfolds them all once every one is folded.
+// The section itself stays as it is.
+const allFolded = (keys) => keys.length > 0 && keys.every((k) => collapsed.has(k));
+function foldRepos(keys) {
+  const fold = !allFolded(keys);
+  for (const k of keys) fold ? collapsed.add(k) : collapsed.delete(k);
+  setTick(tick() + 1);
+}
+
+// Two sibling tap targets, not nested ones: the label folds the section, the
+// trailing button folds its repos.
 function sectionHeader(e) {
   const s = SECTION[e().label];
-  return HStack({ spacing: 5 }, [
+  const label = HStack({ spacing: 5 }, [
     icon(s.icon, 11).color(s.color),
     Text(() => e().label).font(10).weight("bold").color(s.color),
     Spacer(),
@@ -300,12 +314,22 @@ function sectionHeader(e) {
     dotsView(() => (collapsed.has(e().key) ? e().dots.filter((s) => s !== "idle") : [])),
     chevron(() => e().key),
   ])
-    .paddingHorizontal(8)
-    .paddingTop(e().first ? 8 : 18)
-    .paddingBottom(4)
     .frame({ maxWidth: "infinity" })
     .cursor("pointer")
     .onTap(() => flip(collapsed, e().key));
+  const foldAll = Text(() => (tick(), allFolded(e().repoKeys) ? NF.foldMore : NF.foldLess) + " ")
+    .font(12).lineLimit(1).fixedSize().color("tertiary")
+    .opacity(() => (tick(), collapsed.has(e().key) ? 0 : 1)) // nothing to fold while the section is shut
+    .paddingHorizontal(3)
+    .cornerRadius(4)
+    .hoverBackground(PAL.text_dim + "24")
+    .cursor("pointer")
+    .onTap(() => !collapsed.has(e().key) && foldRepos(e().repoKeys));
+  return HStack({ spacing: 4 }, [label, foldAll])
+    .paddingHorizontal(8)
+    .paddingTop(e().first ? 8 : 18)
+    .paddingBottom(4)
+    .frame({ maxWidth: "infinity" });
 }
 
 function repoHeader(e) {
