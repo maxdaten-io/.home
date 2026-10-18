@@ -340,7 +340,7 @@ function worktreeRow(e) {
   const a = () => r().agent;
   const isMain = () => r().path === r().root && !r().session;
   const name = () => {
-    const label = isMain() ? "main checkout" : r().session ? r().w.title || base(r().path) : base(r().path);
+    const label = isMain() ? "" : r().session ? r().w.title || base(r().path) : base(r().path);
     return label + (r().others ? "  +" + r().others : "");
   };
   const branch = () => r().tab?.branch ?? (isMain() ? r().w?.branch : null);
