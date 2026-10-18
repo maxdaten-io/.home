@@ -64,5 +64,15 @@
           }
         ];
       };
+
+      # cmux loads its shell integration only via the outer shell's
+      # --init-command, whose fish_prompt reporter sits behind the blocking
+      # devenv hook. Load it in the devenv shell too, so cmux sees a ready
+      # prompt; the vault's "open session" waits for that before typing.
+      programs.fish.interactiveShellInit = ''
+        if set -q DEVENV_ROOT; and set -q CMUX_FISH_INTEGRATION_FILE; and not functions -q _cmux_prompt
+            source $CMUX_FISH_INTEGRATION_FILE
+        end
+      '';
     };
 }
