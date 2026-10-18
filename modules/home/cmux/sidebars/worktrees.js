@@ -48,12 +48,13 @@ const NF = {
   home: "\u{F02DC}",
   folder: "\u{F024B}",
   folderOpen: "\u{F0770}",
+  // starship's git_branch symbol is Powerline U+E0A0, which draws as tofu here
+  // (verified live); md source-branch is the closest glyph that renders.
   branch: "\u{F062C}",
   robot: "\u{F06A9}",
   alert: "\u{F0362}",
   bolt: "\u{F140B}",
   sleep: "\u{F04B2}",
-  pencil: "\u{F03EB}",
   pull: "\u{F04C2}",
   chevron: "\u{F0142}",
   dots: "\u{F01D8}",
@@ -73,7 +74,8 @@ const SECTION = {
   PRIVATE: { color: PAL.purple, icon: NF.home },
 };
 const CLAUDE = PAL.red;
-const DIRTY = PAL.yellow;
+// git_branch/git_status segment of the starship prompt: fg0 on aqua.
+const GIT = PAL.aqua;
 const PR = PAL.green;
 const GROUPS = [
   ["needs_input", "needs input"],
@@ -338,17 +340,22 @@ function worktreeRow(e) {
   const a = () => r().agent;
   const isMain = () => r().path === r().root && !r().session;
   const name = () => {
-    const branch = r().tab?.branch ?? (isMain() ? r().w?.branch : null);
-    const dirty = r().tab?.dirty ?? (isMain() && r().w?.dirty);
-    const label = isMain() ? (branch ? branch + " (main checkout)" : "main checkout") : r().session ? r().w.title || base(r().path) : base(r().path);
+    const label = isMain() ? "main checkout" : r().session ? r().w.title || base(r().path) : base(r().path);
     return label + (r().others ? "  +" + r().others : "");
   };
+  const branch = () => r().tab?.branch ?? (isMain() ? r().w?.branch : null);
+  // cmux exposes only a dirty Bool, not starship's !/?/+ split: "!" stands for
+  // any change, untracked included.
   const dirty = () => !!(r().tab?.dirty ?? (isMain() && r().w?.dirty));
   const needs = () => a()?.status === "needs_input";
-  // Main checkout: a house (dimmed without a workspace), tinted by its agent if
-  // one runs there. Sessions: the plain status dot, the group header has the icon.
+  // Main checkout: a starship-style git segment, " main !" in fg0 on aqua
+  // (faded without a workspace). Sessions: the status dot, the group header has the icon.
   const lead = isMain()
-    ? icon(NF.branch, 12).color(() => STATUS[a()?.status]?.color ?? (r().w ? "secondary" : "tertiary")).frame({ width: 14 })
+    ? Text(() => NF.branch + (branch() ? " " + branch() : "") + (dirty() ? " !" : ""))
+        .font(11).weight("medium").color(PAL.fg0)
+        .paddingHorizontal(5).paddingVertical(1).background(GIT).cornerRadius(4)
+        .opacity(() => (r().w ? 1 : 0.5))
+        .lineLimit(1).fixedSize("horizontal").layoutPriority(2)
     : Circle({ size: 7 }).fill(() => STATUS[a()?.status]?.color ?? PAL.bg3).frame({ width: 14 });
   const time = () => {
     const s = a()?.status;
@@ -371,8 +378,9 @@ function worktreeRow(e) {
       Text(name).font(13).lineLimit(1).truncation(e().row.session ? "tail" : "middle") // titles read left to right, paths at both ends
         .weight(() => (selected() ? "semibold" : "regular"))
         .color(() => (selected() ? "primary" : r().w ? "secondary" : "tertiary")),
-      icon(NF.pencil, 11).color(DIRTY).opacity(() => (dirty() ? 1 : 0))
-        .frame(() => ({ width: dirty() ? 10 : 0 })),
+      // Sessions carry starship's "!" after the name; the main pill has its own.
+      Text("!").font(12).weight("bold").color(GIT).opacity(() => (dirty() && !isMain() ? 1 : 0))
+        .frame(() => ({ width: dirty() && !isMain() ? 8 : 0 })),
       Spacer({ minLength: 4 }),
       // Badges keep their width; the name truncates instead (docs: priority 2).
       Text(() => (r().w?.pr ? NF.pull + " " + r().w.pr.number : "")).font(10).weight("semibold").color(PR)
