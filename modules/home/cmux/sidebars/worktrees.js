@@ -436,7 +436,7 @@ function worktreeRow(e) {
   // Line 2 is the identity: what this session was asked to do. Nested rows
   // drop the status word, their group header already says it.
   const detail = () => {
-    if (!r().w) return isMain() ? "open a shell on the main checkout" : "no workspace open";
+    if (!r().w) return isMain() ? "" : "no workspace open"; // faded main row: the pill says it
     const word = e().nested ? "" : STATUS[a()?.status]?.word ?? "";
     const prompt = promptOf(r().w, a());
     return [word, prompt ? "“" + prompt + "”" : ""].filter(Boolean).join(" · ");
