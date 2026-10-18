@@ -266,6 +266,51 @@ function openMain(root) {
   cmux("workspace.create", { cwd: root, title: base(root), description: "cw:" + root, focus: true });
 }
 
+// fish (the login shell) and bash both take single quotes literally.
+const sq = (p) => "'" + p.replaceAll("'", "'\\''") + "'";
+
+// Right-click menu. Structure is fixed per row (rows are keyed, the template
+// runs once), so session-only items are left out of the main row, and items
+// whose data comes and goes (PR, unread) bind their labels live instead.
+function rowMenu(r, a, isMain) {
+  const w = () => r().w;
+  const pr = () => w()?.pr;
+  // agent.id is the claude session id (= transcript file name); the claude
+  // wrapper picks the account from the cwd, so cd + resume is enough.
+  const resume = () => a() && "cd " + sq(r().path) + "; and claude --resume " + a().id;
+  const copy = [
+    Button("Path", () => clipboard.write(r().path)),
+    Button("Branch", () => {
+      const b = r().tab?.branch ?? w()?.branch;
+      if (b) clipboard.write(b);
+    }),
+  ];
+  if (!isMain) {
+    copy.push(
+      Button("Session ID", () => a() && clipboard.write(a().id)),
+      Button("Resume Command", () => resume() && clipboard.write(resume())),
+      Button("Last Prompt", () => {
+        const p = promptOf(w(), a());
+        if (p) clipboard.write(p);
+      }),
+    );
+  }
+  const items = [
+    Menu("Copy", copy),
+    Button("Open in Finder", () => openURL("file://" + encodeURI(r().path))),
+    Button(() => (pr() ? "Open Pull Request #" + pr().number : "No Pull Request"), () => pr() && openURL(pr().url)),
+    Divider(),
+    Button(() => (w()?.unread > 0 ? "Mark as Read" : "Mark as Unread"), () =>
+      w() && cmux("workspace.action", { action: w().unread > 0 ? "mark_read" : "mark_unread", workspace_id: w().id })),
+  ];
+  // The main checkout is meant to stay; sessions are disposable. (Closing a
+  // worktree session's workspace keeps the worktree: `cw done` removes both.)
+  if (!isMain) {
+    items.push(Divider(), Button("Close Workspace", () => w() && cmux("workspace.close", { workspace_id: w().id })).destructive());
+  }
+  return items;
+}
+
 function jump(w, a) {
   if (!w) return;
   cmux("workspace.select", { workspace_id: w.id });
@@ -483,10 +528,7 @@ function worktreeRow(e) {
     .hoverBackground(() => (selected() ? PAL.text_dim + "3d" : PAL.text_dim + "24"))
     .frame({ maxWidth: "infinity" })
     .onTap(() => (r().w ? jump(r().w, a()) : isMain() && openMain(r().root)))
-    .contextMenu([
-      Button("Copy Path", () => clipboard.write(r().path)),
-      Button("Mark as Read", () => r().w && cmux("workspace.action", { action: "mark_read", workspace_id: r().w.id })),
-    ]);
+    .contextMenu(rowMenu(r, a, isMain()));
 }
 
 function moreRow(e) {
