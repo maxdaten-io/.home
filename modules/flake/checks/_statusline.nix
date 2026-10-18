@@ -97,6 +97,11 @@ let
     output_style.name = "default";
   };
 
+  longModelJson = builtins.toJSON {
+    model.display_name = "Claude Opus 5.5 (1M context)";
+    workspace.current_dir = "/tmp";
+  };
+
   noRateLimitsJson = builtins.toJSON {
     model.display_name = "Opus 4.6";
     workspace.current_dir = "/tmp";
@@ -133,17 +138,17 @@ let
       run ${render} '${fullJson}'
       assert_success
       # Both rate limit windows rendered (pct from input + countdown)
-      assert_output --regexp "23% [0-9]+d"
-      assert_output --regexp "5% [0-9]+d"
+      assert_output --regexp "23%·[0-9]+d "
+      assert_output --regexp "5%·[0-9]+d "
       # Context window
-      assert_output --partial "██▊        28%"
+      assert_output --partial "⣿⣿⣧⣿⣿⣿⣿⣿⣿⣿ 28%"
       refute_output --partial "10K"
     }
 
     @test "render: no rate_limits degrades gracefully" {
       run ${render} '${noRateLimitsJson}'
       assert_success
-      assert_output --partial "██▊        28%"
+      assert_output --partial "⣿⣿⣧⣿⣿⣿⣿⣿⣿⣿ 28%"
       refute_output --partial "5h"
       refute_output --partial "7d"
     }
@@ -151,8 +156,16 @@ let
     @test "render: fallback without context_window_size" {
       run ${render} '${noCtxSizeJson}'
       assert_success
-      assert_output --partial "██▊        28%"
+      assert_output --partial "⣿⣿⣧⣿⣿⣿⣿⣿⣿⣿ 28%"
       refute_output --partial "10K"
+    }
+
+    @test "render: model name abbreviated" {
+      run ${render} '${longModelJson}'
+      assert_success
+      assert_output --partial "O5.5·1M"
+      refute_output --partial "context"
+      refute_output --partial "Claude"
     }
 
     @test "render: empty JSON does not crash" {

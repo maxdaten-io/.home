@@ -6,6 +6,7 @@ module Main where
 
 import Control.Exception (SomeException, catch)
 import Data.Aeson (FromJSON, decode)
+import Data.List (dropWhileEnd, isSuffixOf, stripPrefix)
 import Data.ByteString.Lazy qualified as BL
 import Data.Maybe (catMaybes, fromMaybe, isJust)
 import Data.Time.Clock (NominalDiffTime, UTCTime, diffUTCTime, getCurrentTime)
@@ -61,19 +62,32 @@ emptyInput = StatusInput Nothing Nothing Nothing Nothing
 
 ----------------------- Formatting --------------------------
 
+{- | "Claude Opus 5.5 (1M context)" -> "O5.5·1M".
+  Family shrinks to its initial only for the plain "<Family> <version>" shape;
+  any other shape or parenthetical is left alone rather than guessed at.
+-}
+abbrevModel :: String -> String
+abbrevModel name = case break (== '(') base of
+    (fam, '(' : rest)
+        | suffix `isSuffixOf` rest ->
+            short fam ++ "·" ++ take (length rest - length suffix) rest
+    _ -> short base
+  where
+    base = fromMaybe name (stripPrefix "Claude " name)
+    suffix = " context)"
+    short s = case words s of
+        [f : _, ver] -> f : ver
+        _ -> dropWhileEnd (== ' ') s
+
+-- | Largest unit only, floored (never overstates time left): 38m, 3h, 4d.
 formatCountdown :: NominalDiffTime -> String
 formatCountdown dt
     | secs <= 0 = "now"
-    | secs < 3600 = show mins ++ "m"
-    | secs < 86400 = show hrs ++ "h " ++ show rMins ++ "m"
-    | otherwise = show days ++ "d " ++ show rHrs ++ "h"
+    | secs < 3600 = show (secs `div` 60) ++ "m"
+    | secs < 86400 = show (secs `div` 3600) ++ "h"
+    | otherwise = show (secs `div` 86400) ++ "d"
   where
     secs = floor dt :: Int
-    mins = secs `div` 60
-    hrs = secs `div` 3600
-    rMins = (secs `mod` 3600) `div` 60
-    days = secs `div` 86400
-    rHrs = (secs `mod` 86400) `div` 3600
 
 ----------------------- Usage info --------------------------
 
@@ -111,36 +125,33 @@ iconDatabase = '\xF01BC' -- nf-md-database
 
 ---------------------- Context bar --------------------------
 
-{- | 10-cell bar of used context at 1/8-cell resolution (80 steps, 1.25% each),
-  e.g. used=28 -> 22 eighths -> "██▊       " + " 28%".
-  The unfilled part is a dark bg track, not glyphs: a partial block like '▊'
-  leaves the rest of its cell as bg, so it only blends if the track is bg.
-  Raw 24-bit ANSI escapes; starship passes env values through verbatim.
+{- | 10-cell braille bar of used context, 8 dots per cell (80 steps, 1.25% each),
+  e.g. used=28 -> 22 dots -> "⣿⣿⣧" in fill color + 7 dim "⣿" + " 28%".
+  A partial cell fills its left column bottom-up, then the right column.
+  Raw 24-bit ANSI fg escapes; starship passes env values through verbatim.
+  Bg stays whatever the CLAUDE_CTX segment sets (color_bg3).
 -}
 ctxBar :: Int -> String
 ctxBar used =
-    bg track (fg fill bar)
-        ++ bg bg3 (fg fg0 (" " ++ show used ++ "%"))
+    fg fill (replicate full '⣿' ++ partial part)
+        ++ fg empty (replicate (10 - full - length (partial part)) '⣿')
+        ++ fg fg0 (" " ++ show used ++ "%")
   where
-    eighths = max 0 (min 80 ((used * 8 + 5) `div` 10)) -- round(used * 0.8), clamp
-    (full, part) = eighths `divMod` 8
-    bar = take 10 (replicate full '█' ++ partial part ++ repeat ' ')
+    dots = max 0 (min 80 ((used * 8 + 5) `div` 10)) -- round(used * 0.8), clamp
+    (full, part) = dots `divMod` 8
     partial 0 = ""
-    partial k = ["▏▎▍▌▋▊▉" !! (k - 1)]
+    partial k = ["⡀⡄⡆⡇⣇⣧⣷" !! (k - 1)]
     fill
         | used <= 10 = green
         | used <= 75 = grey
         | used <= 80 = yellow
         | otherwise = red
-    fg = sgr "38"
-    bg = sgr "48"
-    sgr k (r, g, b) str = "\ESC[" ++ k ++ ";2;" ++ show r ++ ";" ++ show g ++ ";" ++ show b ++ "m" ++ str
+    fg (r, g, b) str = "\ESC[38;2;" ++ show r ++ ";" ++ show g ++ ";" ++ show b ++ "m" ++ str
     -- Atelier Cave palette (modules/home/_palette.nix)
     fg0 = (0xef, 0xec, 0xf4) :: (Int, Int, Int)
-    bg3 = (0x65, 0x5f, 0x6d) -- CLAUDE_CTX segment bg; restored after the bar
-    track = (0x19, 0x17, 0x1c) -- color_bg1
+    empty = (0x45, 0x40, 0x4c) -- darker than color_bg3: recessed, not competing
     green = (0x2a, 0x92, 0x92)
-    grey = (0xc5, 0xc1, 0xcb) -- lighter than color_text_dim; must read on the track
+    grey = (0xc5, 0xc1, 0xcb) -- lighter than color_text_dim; must read on color_bg3
     yellow = (0xa0, 0x6e, 0x3b)
     red = (0xbe, 0x46, 0x78)
 
@@ -179,7 +190,7 @@ main = do
     let si = fromMaybe emptyInput (decode input)
 
     let cwd = maybe "" current_dir (workspace si)
-        mdl = maybe "" display_name (model si)
+        mdl = maybe "" (abbrevModel . display_name) (model si)
         mCtx = context_window si
         ctxPct = remaining_percentage =<< mCtx
 
@@ -199,7 +210,7 @@ main = do
         fmtPct u = show (round u :: Int) ++ "%"
         fmtReset mR = case mR of
             Nothing -> ""
-            Just r -> " " ++ formatCountdown (diffUTCTime r now)
+            Just r -> "·" ++ formatCountdown (diffUTCTime r now)
         usageStr = case (fiveHourUtil usage, sevenDayUtil usage) of
             (Nothing, Nothing) -> Nothing
             (Just u5, Nothing) -> Just $ [iconBattery] ++ " " ++ fmtPct u5 ++ fmtReset (fiveHourReset usage)
