@@ -7,6 +7,10 @@
 #   cw here [name]  from anywhere inside a repo: same group, but a workspace on
 #                   the main checkout running plain `claude` — no worktree, no
 #                   branch (for repos that work on main, like this one).
+#
+# Both make sure the repo has its main-checkout workspace: a plain shell at the
+# root, stamped "cw:<root>", that the worktrees sidebar pins as the repo's
+# first row. Sessions are always workspaces of their own.
 #   cw done         from the worktree's shell: refuse if anything would be lost,
 #                   remove the worktree (through the repo's WorktreeRemove hooks
 #                   if it declares any), close this workspace.
@@ -102,6 +106,17 @@ repo_group() {
     die "could not find or create cmux group for $1"
 }
 
+# The main-checkout workspace for root $1 in group $2, created unfocused when
+# no workspace carries its stamp yet.
+ensure_main() {
+  local root=$1 group=$2
+  cmux workspace list --json |
+    jq -e --arg d "cw:$root" 'any(.workspaces[]; .description == $d)' >/dev/null && return
+  cmux workspace create --name "$(basename "$root")" --cwd "$root" --group "$group" \
+    --description "cw:$root" --focus false >/dev/null ||
+    echo "cw: could not create the main-checkout workspace for $root" >&2
+}
+
 cmd_new() {
   local name=${1:-}
   [[ $name =~ ^[A-Za-z0-9._-]+$ ]] || die "name must match [A-Za-z0-9._-]+, got '${name}'"
@@ -110,6 +125,7 @@ cmd_new() {
   root=$(repo_root "$PWD")
   before=$(worktree_paths "$root")
   group=$(repo_group "$root")
+  ensure_main "$root" "$group"
 
   ws=$(cmux workspace create --name "$name" --cwd "$root" --group "$group" --focus true | ref_of)
   [[ -n $ws ]] || die "cmux workspace create returned no workspace ref"
@@ -154,13 +170,14 @@ cmd_new() {
   echo "$ws  $wt"
 }
 
-# No description stamp on purpose: unstamped, the worktrees sidebar files the
-# session under the repo's main checkout, and `cw done` leaves it alone.
+# No description stamp on purpose: unstamped root workspaces are sessions to
+# the worktrees sidebar, and `cw done` leaves them alone.
 cmd_here() {
   local root name group ws surface
   root=$(repo_root "$PWD") # the main checkout even when run from a worktree
   name=${1:-$(basename "$root")}
   group=$(repo_group "$root")
+  ensure_main "$root" "$group"
   ws=$(cmux workspace create --name "$name" --cwd "$root" --group "$group" --focus true | ref_of)
   [[ -n $ws ]] || die "cmux workspace create returned no workspace ref"
   surface=$(cmux list-panes --workspace "$ws" --json | jq -er '.panes[0].selected_surface_ref')

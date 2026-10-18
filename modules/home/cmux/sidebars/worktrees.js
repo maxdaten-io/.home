@@ -3,7 +3,7 @@
 //
 //   WORK
 //     <repo>
-//       main checkout            the repo-root workspace (and its agent, if any)
+//       >_ main checkout         the repo's own shell workspace (stamped cw:<root>)
 //       sessions
 //         needs input / working / idle   collapsible; named worktrees, newest first
 //
@@ -59,6 +59,7 @@ const NF = {
   chevron: "\u{F0142}",
   dots: "\u{F01D8}",
   pin: "\u{F0403}",
+  console: "\u{F018D}",
 };
 const icon = (glyph, size) => Text(glyph).font(size).lineLimit(1).fixedSize();
 
@@ -130,14 +131,16 @@ function sessionName(w, a) {
 }
 
 // --- model ---------------------------------------------------------------------
-// One row per worktree path, plus one per workspace for agents running in a
-// main checkout (those share the root path, but each is its own session, named
-// by workspace title). Sources, in order: live agents; `cw new` workspaces whose
-// agent isn't (or no longer) running; plain git workspaces (main checkouts, or
-// a worktree opened by hand). Several hits on one key: the most urgent (then
-// most recent) one represents it, `others` counts the extra agents.
+// The main checkout is exactly one workspace per repo: the one stamped
+// "cw:<root>" (made by `cw new`/`cw here`, or by tapping its row). Every other
+// workspace is a session: one row per worktree path, one per workspace at a
+// repo root (they share the root path but are separate sessions). Sources, in
+// order: live agents; stamped workspaces; other git workspaces. Several hits on
+// one key: the most urgent (then most recent) one represents it, `others`
+// counts the extra agents.
 function collectRows(ws) {
   const byKey = new Map();
+  const hosted = new Set(); // workspaces already represented by a live agent's row
   const put = (key, path, w, agent, at, session) => {
     const prev = byKey.get(key);
     const better = !prev || rankOf(agent) < rankOf(prev.agent) || (rankOf(agent) === rankOf(prev.agent) && at > prev.at);
@@ -155,18 +158,34 @@ function collectRows(ws) {
       if (!path) continue;
       const atRoot = rootOf(path) === path;
       put(atRoot ? "s:" + w.id : path, path, w, a, secs(a.lastActivityAt ?? a.sinceEpoch ?? 0), atRoot);
+      hosted.add(w.id);
     }
   }
   for (const w of ws) {
     if (w.pinned) continue;
-    const path = stampOf(w) ?? (isGit(w) || (w.agents ?? []).length ? w.directory : null);
-    if (path && !byKey.has(path)) put(path, path, w, null, secs(w.latestAt ?? 0), false);
+    const stamp = stampOf(w);
+    if (stamp) {
+      if (!byKey.has(stamp)) put(stamp, stamp, w, null, secs(w.latestAt ?? 0), false);
+      continue;
+    }
+    // A `claude -w` workspace sits at the root while its agent works in the
+    // worktree: that agent's row already is this workspace.
+    if (hosted.has(w.id)) continue;
+    const dir = (isGit(w) || (w.agents ?? []).length) && w.directory;
+    if (!dir) continue;
+    // Unstamped at a repo root: a session of its own, never the main checkout.
+    const atRoot = rootOf(dir) === dir;
+    const key = atRoot ? "s:" + w.id : dir;
+    if (!byKey.has(key)) put(key, dir, w, null, secs(w.latestAt ?? 0), atRoot);
   }
   return [...byKey.values()];
 }
 
 // Collapsed sections/repos/groups and expanded "+N older" lists, local to this view.
 const collapsed = new Set();
+// Roots whose main workspace was requested but hasn't shown up in the data yet
+// (refresh is ~1s): a second tap in that window must not create a twin.
+const creating = new Set();
 const expanded = new Set();
 const [tick, setTick] = signal(0);
 const flip = (set, key) => {
@@ -209,6 +228,7 @@ const entries = computed(() => {
 
       // No workspace at the root: still listed, dimmed, so the repo has an anchor.
       const main = rs.find((r) => r.path === root && !r.session) ?? { path: root, root, w: null, agent: null, at: 0, others: 0 };
+      if (main.w) creating.delete(root);
       out.push({ kind: "row", key: "w:" + root, row: main, nested: false });
 
       const sessions = rs.filter((r) => r.path !== root || r.session);
@@ -232,6 +252,14 @@ const entries = computed(() => {
 });
 
 // --- views ---------------------------------------------------------------------
+// Same stamp `cw` uses, so cw and the sidebar agree on which workspace it is.
+// (No cmux group from here: the socket call's group params are undocumented.)
+function openMain(root) {
+  if (creating.has(root)) return;
+  creating.add(root);
+  cmux("workspace.create", { cwd: root, title: base(root), description: "cw:" + root, focus: true });
+}
+
 function jump(w, a) {
   if (!w) return;
   cmux("workspace.select", { workspace_id: w.id });
@@ -360,14 +388,18 @@ function worktreeRow(e) {
   // any change, untracked included.
   const dirty = () => !!(r().tab?.dirty ?? (isMain() && r().w?.dirty));
   const needs = () => a()?.status === "needs_input";
-  // Main checkout: a starship-style git segment, " main !" in fg0 on aqua
-  // (faded without a workspace). Sessions: the status dot, the group header has the icon.
+  // Main checkout: a shell glyph, then a starship-style git segment, " main !"
+  // in fg0 on aqua (faded without a workspace). Sessions: the status dot, the
+  // group header has the icon.
   const lead = isMain()
-    ? Text(() => NF.branch + (branch() ? " " + branch() : "") + (dirty() ? " !" : ""))
-        .font(11).weight("medium").color(PAL.fg0)
-        .paddingHorizontal(5).paddingVertical(1).background(GIT).cornerRadius(4)
-        .opacity(() => (r().w ? 1 : 0.5))
-        .lineLimit(1).fixedSize("horizontal").layoutPriority(2)
+    ? HStack({ spacing: 6 }, [
+        icon(NF.console, 13).color(() => (r().w ? "secondary" : "tertiary")).frame({ width: 14 }),
+        Text(() => NF.branch + (branch() ? " " + branch() : "") + (dirty() ? " !" : ""))
+          .font(11).weight("medium").color(PAL.fg0)
+          .paddingHorizontal(5).paddingVertical(1).background(GIT).cornerRadius(4)
+          .opacity(() => (r().w ? 1 : 0.5))
+          .lineLimit(1).fixedSize("horizontal").layoutPriority(2),
+      ])
     : Circle({ size: 7 }).fill(() => STATUS[a()?.status]?.color ?? PAL.bg3).frame({ width: 14 });
   const time = () => {
     const s = a()?.status;
@@ -377,7 +409,7 @@ function worktreeRow(e) {
   // Line 2 is the identity: what this session was asked to do. Nested rows
   // drop the status word, their group header already says it.
   const detail = () => {
-    if (!r().w) return "no workspace open";
+    if (!r().w) return isMain() ? "open a shell on the main checkout" : "no workspace open";
     const word = e().nested ? "" : STATUS[a()?.status]?.word ?? "";
     const prompt = promptOf(r().w, a());
     return [word, prompt ? "“" + prompt + "”" : ""].filter(Boolean).join(" · ");
@@ -423,7 +455,7 @@ function worktreeRow(e) {
     .background(() => (selected() ? PAL.text_dim + "3d" : needs() ? PAL.orange + "1F" : null))
     .hoverBackground(() => (selected() ? PAL.text_dim + "3d" : PAL.text_dim + "24"))
     .frame({ maxWidth: "infinity" })
-    .onTap(() => jump(r().w, a()))
+    .onTap(() => (r().w ? jump(r().w, a()) : isMain() && openMain(r().root)))
     .contextMenu([
       Button("Copy Path", () => clipboard.write(r().path)),
       Button("Mark as Read", () => r().w && cmux("workspace.action", { action: "mark_read", workspace_id: r().w.id })),
