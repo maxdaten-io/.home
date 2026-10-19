@@ -53,6 +53,8 @@ from the outer flake-parts module — there is no `specialArgs`**.
 - `modules/flake/` — flake-level plumbing (systems, perSystem pkgs, checks)
 - `modules/home/` — Home Manager aspects; `base.nix` is the roll-up every host
   imports, `gui.nix` only hosts with a display
+- `modules/home/cmux/` — read its `README.md` before changing the sidebar or
+  `cw`: how it reloads, which sidebar is live, screenshots, tests
 - `modules/users/jloos.nix` — user account + home-manager wiring, both classes
 - `modules/hosts/macbook-pro/` — Darwin host `"Jan-Philips-MacBook-Pro"`
 - `modules/hosts/pi/` — `nixosConfigurations.pi` and `.pi-minimal`, plus
