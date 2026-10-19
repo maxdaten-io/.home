@@ -129,11 +129,18 @@ function promptOf(w, a) {
 // The workspace title follows the *focused* tab instead: with a shell focused
 // it reads "claude attach <id> ~/D/.home" or a bare path. The agent's own tab
 // goes first, but panelId can point at the attaching shell, so any tab counts.
+// Claude doesn't always lead with the glyph (a live session read plainly
+// "Learning from the /pr skill"), so the agent's own tab also names it as long
+// as it doesn't read as a shell: a path, or `cmd … ~/path`.
 const GLYPH = /^[^\p{L}\p{N}~/.\s]+\s+/u;
+const SHELLISH = /^[~/]|\s~?\/\S*$|^claude attach /;
 function sessionName(w, a) {
   const tabs = w.tabs ?? [];
-  const named = [tabs.find((t) => t.id === a?.panelId), ...tabs].find((t) => GLYPH.test(t?.title ?? ""));
-  return (named?.title ?? w.title ?? "").replace(GLYPH, "");
+  const own = tabs.find((t) => t.id === a?.panelId);
+  const named = [own, ...tabs].find((t) => GLYPH.test(t?.title ?? ""));
+  if (named) return named.title.replace(GLYPH, "");
+  if (own?.title && !SHELLISH.test(own.title)) return own.title;
+  return (w.title ?? "").replace(GLYPH, "");
 }
 
 // --- model ---------------------------------------------------------------------
