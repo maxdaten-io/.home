@@ -157,24 +157,26 @@ ctxBar used =
 
 -------------------- Terminal width -------------------------
 
-{- | Detect terminal width: COLUMNS env var > /dev/tty query > fallback 120.
-  stdout is a pipe when Claude Code invokes us, so we open /dev/tty directly.
-  Claude Code's statusline area is narrower than the tty (its own padding);
-  starship's $fill pads to exactly what we pass, so overshoot gets cut to "…".
+{- | Detect terminal width: COLUMNS env var > /dev/tty query > fallback 120,
+  minus a margin. Claude Code sets COLUMNS to the full terminal width and
+  spawns us without a controlling tty, so COLUMNS is the path that matters.
+  Its statusline area is narrower than that, and starship's $fill pads to
+  exactly what we pass, so any overshoot gets cut to "…".
 -}
 getTerminalWidth :: IO String
 getTerminalWidth = do
     mCols <- lookupEnv "COLUMNS"
-    case mCols of
-        Just c | not (null c) -> pure c
-        _ -> queryTty `catch` \(_ :: SomeException) -> pure "120"
+    cols <- case reads =<< maybe [] pure mCols of
+        [(c, "")] -> pure c
+        _ -> queryTty `catch` \(_ :: SomeException) -> pure 120
+    pure (show (cols - margin))
   where
     queryTty = do
         h <- openFile "/dev/tty" ReadMode
         mSize <- hSize h
         hClose h
-        pure $ maybe "120" (show . subtract ttyMargin . width) mSize
-    ttyMargin = 12 -- was 5: cut the last ~7 cells (" 28%" + cap) at 2026-10
+        pure (maybe 120 width mSize)
+    margin = 12 :: Int -- 5 cut the last ~7 cells (" 28%" + cap), 2026-10
 
 ----------------------- Statusline --------------------------
 

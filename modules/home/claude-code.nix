@@ -316,6 +316,15 @@
         # Per skill: "on" | "name-only" (no description) | "user-invocable-only"
         # (hidden from model, /name still works) | "off".
         skillOverrides = { };
+        statusLine = {
+          type = "command";
+          command = "~/.claude/statusline-command";
+          padding = 0;
+          # Re-runs only on state events (tokens, model, mode, …), never on
+          # resize, so the $fill-padded line keeps the old width and gets cut
+          # to "…". Polling re-fits it; one run ≈ 50 ms (starship + git).
+          refreshInterval = 2;
+        };
       };
 
       # Built-in tools; false = bare-name permissions.deny entry, which drops the
