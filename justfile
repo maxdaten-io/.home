@@ -2,21 +2,22 @@ default:
     update-switch
 
 switch:
-    sudo darwin-rebuild switch --flake . --verbose
+    sudo darwin-rebuild switch --flake .
     @just _prompt-commit
 
 _prompt-commit:
     #!/usr/bin/env bash
     set -euo pipefail
     echo ""
-    echo "Darwin rebuild complete!"
+    echo "Darwin rebuild complete: $(readlink /nix/var/nix/profiles/system)"
     echo ""
-    if ! git diff --quiet || ! git diff --cached --quiet; then
+    if [ -n "$(git status --porcelain)" ]; then
         echo "Changes detected. Would you like to commit them? (y/n)"
         read -r answer
         if [ "$answer" = "y" ]; then
-            claude \
-              -p "Create a conventional commit for all current changes. Stage all files and commit." \
+            # Parallel sessions share this checkout: stage by name, never the whole tree.
+            SECURITY_GUIDANCE_DISABLE=1 claude \
+              -p "Commit the changes from this darwin switch as conventional commits. Run git status, stage only the paths you are committing by name, and leave changes that look unrelated unstaged; list them in your reply." \
               --allow-dangerously-skip-permissions --dangerously-skip-permissions \
               --model haiku
             echo "Changes committed!"
