@@ -176,7 +176,7 @@ getTerminalWidth = do
         mSize <- hSize h
         hClose h
         pure (maybe 120 width mSize)
-    margin = 12 :: Int -- 5 cut the last ~7 cells (" 28%" + cap), 2026-10
+    margin = 7 :: Int -- 0 cut ~6 cells (" 28%" + cap); 12 left ~10 empty, 2026-10
 
 ----------------------- Statusline --------------------------
 
