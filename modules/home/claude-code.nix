@@ -316,6 +316,13 @@
         # Per skill: "on" | "name-only" (no description) | "user-invocable-only"
         # (hidden from model, /name still works) | "off".
         skillOverrides = { };
+        # security-guidance otherwise reviews every turn's diff; in shared
+        # checkouts that ran 8 reviews in 10 min, all empty, two on one diff.
+        # Commit/push reviews stay on.
+        env.ENABLE_STOP_REVIEW = "0";
+        # Injects "explanatory" insight boxes on SessionStart, fighting the
+        # Karpathy output style and "brutally direct" in CLAUDE.md.
+        enabledPlugins."explanatory-output-style@claude-plugins-official" = false;
         statusLine = {
           type = "command";
           command = "~/.claude/statusline-command";
