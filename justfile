@@ -1,19 +1,24 @@
 default:
     update-switch
 
-switch:
+# `just switch --commit` commits without asking
+[arg("commit", long="commit", value="y")]
+switch commit="":
     sudo darwin-rebuild switch --flake .
-    @just _prompt-commit
+    @just _prompt-commit {{commit}}
 
-_prompt-commit:
+_prompt-commit answer="":
     #!/usr/bin/env bash
     set -euo pipefail
     echo ""
     echo "Darwin rebuild complete: $(readlink /nix/var/nix/profiles/system)"
     echo ""
     if [ -n "$(git status --porcelain)" ]; then
-        echo "Changes detected. Would you like to commit them? (y/n)"
-        read -r answer
+        answer="{{answer}}"
+        if [ -z "$answer" ]; then
+            echo "Changes detected. Would you like to commit them? (y/n)"
+            read -r answer
+        fi
         if [ "$answer" = "y" ]; then
             # Parallel sessions share this checkout: stage by name, never the whole tree.
             SECURITY_GUIDANCE_DISABLE=1 claude \
