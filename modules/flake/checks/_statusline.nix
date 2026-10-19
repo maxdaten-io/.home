@@ -171,11 +171,11 @@ let
     @test "render: COLUMNS minus margin, so Claude Code doesn't cut to …" {
       run ${render} '${fullJson}'
       assert_success
-      # render passes COLUMNS=120; margin 7 -> exactly 113 cells on the last
+      # render passes COLUMNS=120; margin 5 -> exactly 115 cells on the last
       # line (starship prepends a newline). Count codepoints without a locale
       # (sandbox has none): drop UTF-8 continuation bytes, count the rest.
       n=$(printf %s "$output" | tail -n1 | LC_ALL=C tr -d '\200-\277' | wc -c | tr -d ' ')
-      [ "$n" -eq 113 ]
+      [ "$n" -eq 115 ]
     }
 
     @test "render: empty JSON does not crash" {
