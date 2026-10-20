@@ -557,6 +557,14 @@ function worktreeRow(e) {
   const selected = () => !!r().w?.selected;
 
   const body = VStack({ spacing: 1, alignment: "leading" }, [
+    // A worktree session's worktree heads the row as a branch-style chip;
+    // collapsed for everything else.
+    Text(() => (tree() ? NF.branch + " " + tree() : "")).font(10).weight("medium").color(GIT)
+      .paddingHorizontal(() => (tree() ? 5 : 0))
+      .background(() => (tree() ? GIT + "26" : null)).cornerRadius(6)
+      .lineLimit(1).truncation("middle")
+      .paddingLeading(18)
+      .frame(() => ({ maxWidth: "infinity", height: tree() ? 15 : 0, alignment: "leading" })),
     HStack({ spacing: 6 }, [
       lead,
       Text(name).font(13).lineLimit(1).truncation("tail")
@@ -575,19 +583,11 @@ function worktreeRow(e) {
       Text(time).font(10).monospaced().color(() => (needs() ? STATUS.needs_input.color : "tertiary"))
         .lineLimit(1).fixedSize("horizontal").layoutPriority(2),
     ]),
-    // The worktree a session runs in leads line 2 as a branch-style chip, in
-    // full; the prompt truncates instead.
-    HStack({ spacing: 5 }, [
-      Text(() => (tree() ? NF.branch + " " + tree() : "")).font(10).weight("medium").color(GIT)
-        .paddingHorizontal(() => (tree() ? 5 : 0))
-        .background(() => (tree() ? GIT + "26" : null)).cornerRadius(6)
-        .lineLimit(1).fixedSize("horizontal").layoutPriority(2),
-      Text(detail)
-        .font(11).lineLimit(1).truncation("tail")
-        .color(() => (needs() ? STATUS.needs_input.color : "tertiary")),
-    ])
+    Text(detail)
+      .font(11).lineLimit(1).truncation("tail")
+      .color(() => (needs() ? STATUS.needs_input.color : "tertiary"))
       .paddingLeading(18)
-      .frame(() => ({ maxWidth: "infinity", height: detail() || tree() ? 15 : 0, alignment: "leading" })),
+      .frame(() => ({ maxWidth: "infinity", height: detail() ? 15 : 0 })),
   ])
     .paddingHorizontal(8)
     .paddingVertical(4)
