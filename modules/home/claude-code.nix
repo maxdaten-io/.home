@@ -88,6 +88,17 @@
             --prefix PATH : "${pkgs.git}/bin"
         '';
       };
+      # Hook: attach a worktree session's PR to its cmux workspace (see script).
+      # cmux comes from PATH: Home Manager wraps it, nixpkgs doesn't ship it.
+      claude-cmux-pr = pkgs.writeShellApplication {
+        name = "claude-cmux-pr";
+        runtimeInputs = [
+          pkgs.gh
+          pkgs.git
+          pkgs.jq
+        ];
+        text = builtins.readFile ./claude-code/cmux-pr.sh;
+      };
       claudeMd = ''
         # User Instructions
 
@@ -323,6 +334,20 @@
         # Injects "explanatory" insight boxes on SessionStart, fighting the
         # Karpathy output style and "brutally direct" in CLAUDE.md.
         enabledPlugins."explanatory-output-style@claude-plugins-official" = false;
+        # Events nothing else uses: jq `*` replaces arrays wholesale, and
+        # Stop/PostToolUse hold superset's and the statusline's hooks.
+        # Notification fires when a turn ends waiting on you, so a PR opened
+        # in that turn shows up then.
+        hooks = pkgs.lib.genAttrs [ "SessionStart" "Notification" ] (_: [
+          {
+            hooks = [
+              {
+                type = "command";
+                command = "${claude-cmux-pr}/bin/claude-cmux-pr";
+              }
+            ];
+          }
+        ]);
         statusLine = {
           type = "command";
           command = "~/.claude/statusline-command";
