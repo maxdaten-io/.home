@@ -10,11 +10,11 @@ cd "$(dirname "$0")"
 js=../sidebars/worktrees.js
 
 node --check "$js"
-for t in fold-test.mjs name-test.mjs stamp-test.mjs; do
+for t in cap-test.mjs fold-test.mjs name-test.mjs stamp-test.mjs; do
   node "$t" "$js" >/dev/null || {
     node "$t" "$js"
     exit 1
   }
 done
 node harness.mjs "$js" >/dev/null
-echo "worktrees.js: syntax + 3 tests + harness ok"
+echo "worktrees.js: syntax + 4 tests + harness ok"

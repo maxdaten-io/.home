@@ -279,9 +279,10 @@ const entries = computed(() => {
         const groupKey = "g:" + root + ":" + status;
         out.push({ kind: "group", key: groupKey, status, word, count: g.length });
         if (collapsed.has(groupKey)) continue;
-        const shown = expanded.has(groupKey) ? g : g.slice(0, PER_GROUP);
-        for (const r of shown) out.push({ kind: "row", key: r.session ? "s:" + r.w.id : "w:" + r.path, row: r, nested: true });
-        if (g.length > PER_GROUP) {
+        // A session waiting on you is never hidden behind "+N older".
+        const cap = status === "needs_input" || expanded.has(groupKey) ? Infinity : PER_GROUP;
+        for (const r of g.slice(0, cap)) out.push({ kind: "row", key: r.session ? "s:" + r.w.id : "w:" + r.path, row: r, nested: true });
+        if (status !== "needs_input" && g.length > PER_GROUP) {
           out.push({ kind: "more", key: "m:" + groupKey, listKey: groupKey, hidden: g.length - PER_GROUP });
         }
       }
@@ -575,6 +576,10 @@ function worktreeRow(e) {
         .frame(() => ({ width: dirty() && !isMain() ? 8 : 0 })),
       Spacer({ minLength: 4 }),
       // Badges keep their width; the name truncates instead (docs: priority 2).
+      // Unread notifications, as on pinned rows: hook status can say idle while
+      // the workspace still holds a notification for you.
+      Text(() => (r().w?.unread > 0 ? String(r().w.unread) : "")).font(10).bold().color(PAL.red)
+        .lineLimit(1).fixedSize("horizontal").layoutPriority(2),
       Text(() => (r().w?.pr ? NF.pull + " " + r().w.pr.number : "")).font(10).weight("semibold").color(PR)
         .paddingHorizontal(() => (r().w?.pr ? 5 : 0))
         .background(() => (r().w?.pr ? PR + "26" : null)).cornerRadius(6)
