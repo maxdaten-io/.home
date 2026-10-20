@@ -354,7 +354,9 @@ function rowMenu(r, a, isMain) {
   if (!isMain) {
     items.push(Divider());
     if (!r().session) items.push(Button("Done — Remove Worktree", () => done(r, a))); // worktree rows; stable per key
-    items.push(Button("Close Workspace", () => w() && cmux("workspace.close", { workspace_id: w().id })).destructive());
+    // force: a session workspace always runs claude, and without it cmux answers
+    // confirmation_required, which the sidebar drops silently. Like `cw done`.
+    items.push(Button("Close Workspace", () => w() && cmux("workspace.close", { workspace_id: w().id, force: true })).destructive());
   }
   return items;
 }
