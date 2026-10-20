@@ -565,11 +565,6 @@ function worktreeRow(e) {
       // Sessions carry starship's "!" after the name; the main pill has its own.
       Text("!").font(12).weight("bold").color(GIT).opacity(() => (dirty() && !isMain() ? 1 : 0))
         .frame(() => ({ width: dirty() && !isMain() ? 8 : 0 })),
-      // The worktree a session runs in, as a branch-style chip.
-      Text(() => (tree() ? NF.branch + " " + tree() : "")).font(10).weight("medium").color(GIT)
-        .paddingHorizontal(() => (tree() ? 5 : 0))
-        .background(() => (tree() ? GIT + "26" : null)).cornerRadius(6)
-        .lineLimit(1).truncation("middle").frame(() => ({ maxWidth: tree() ? 90 : 0 })), // the session name gets the room
       Spacer({ minLength: 4 }),
       // Badges keep their width; the name truncates instead (docs: priority 2).
       Text(() => (r().w?.pr ? NF.pull + " " + r().w.pr.number : "")).font(10).weight("semibold").color(PR)
@@ -580,11 +575,19 @@ function worktreeRow(e) {
       Text(time).font(10).monospaced().color(() => (needs() ? STATUS.needs_input.color : "tertiary"))
         .lineLimit(1).fixedSize("horizontal").layoutPriority(2),
     ]),
-    Text(detail)
-      .font(11).lineLimit(1).truncation("tail")
-      .color(() => (needs() ? STATUS.needs_input.color : "tertiary"))
+    // The worktree a session runs in leads line 2 as a branch-style chip, in
+    // full; the prompt truncates instead.
+    HStack({ spacing: 5 }, [
+      Text(() => (tree() ? NF.branch + " " + tree() : "")).font(10).weight("medium").color(GIT)
+        .paddingHorizontal(() => (tree() ? 5 : 0))
+        .background(() => (tree() ? GIT + "26" : null)).cornerRadius(6)
+        .lineLimit(1).fixedSize("horizontal").layoutPriority(2),
+      Text(detail)
+        .font(11).lineLimit(1).truncation("tail")
+        .color(() => (needs() ? STATUS.needs_input.color : "tertiary")),
+    ])
       .paddingLeading(18)
-      .frame(() => ({ maxWidth: "infinity", height: detail() ? 15 : 0 })),
+      .frame(() => ({ maxWidth: "infinity", height: detail() || tree() ? 15 : 0, alignment: "leading" })),
   ])
     .paddingHorizontal(8)
     .paddingVertical(4)
