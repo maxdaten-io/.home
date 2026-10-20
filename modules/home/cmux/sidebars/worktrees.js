@@ -189,6 +189,9 @@ function collectRows(ws) {
     if (w.pinned) continue;
     const stamp = stampOf(w);
     if (stamp) {
+      // A worktree stamp outlives its worktree: once the agent is back at the
+      // root (exited or removed it), its session row already is this workspace.
+      if (hosted.has(w.id) && rootOf(stamp) !== stamp) continue;
       if (!byKey.has(stamp)) put(stamp, stamp, w, null, secs(w.latestAt ?? 0), false);
       continue;
     }

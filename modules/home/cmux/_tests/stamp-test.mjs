@@ -15,4 +15,11 @@ const ws = [
 collectRows(ws); collectRows(ws); collectRows(ws); // three refresh ticks
 console.log(JSON.stringify(calls));
 const ok = calls.length === 1 && calls[0][1].workspace_id === "bare" && calls[0][1].description === "cw:" + W && calls[0][1].action === "set_description";
-console.log(ok ? "ok   one stamp, right workspace and path, no repeats" : "FAIL"); process.exit(ok ? 0 : 1);
+console.log(ok ? "ok   one stamp, right workspace and path, no repeats" : "FAIL"); if (!ok) process.exit(1);
+// Stamped while its agent was in the worktree, agent since back at the root
+// (worktree exited/removed): still one session, one row.
+const left = [{ id: "left", directory: R, description: "cw:" + W, tabs: [], agents: [{ status: "idle", directory: R }] }];
+const rows = collectRows(left).map((r) => r.path);
+console.log(JSON.stringify(rows));
+const one = rows.length === 1 && rows[0] === R;
+console.log(one ? "ok   left worktree: one row, at the root" : "FAIL"); process.exit(one ? 0 : 1);
