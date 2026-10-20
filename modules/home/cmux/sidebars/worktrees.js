@@ -595,7 +595,7 @@ function worktreeRow(e) {
 
   // Leading accent bar: orange while the session waits on you, accent when selected.
   return HStack({ spacing: 0 }, [
-    Capsule().fill(() => (needs() ? STATUS.needs_input.color : selected() ? PAL.purple : "clear")).frame({ width: 3, height: 18 }),
+    Capsule().fill(() => (needs() ? STATUS.needs_input.color : selected() ? PAL.purple : "clear")).frame({ width: 3, maxHeight: "infinity" }).paddingVertical(5),
     body,
   ])
     .marginLeading(e().nested ? 26 : 12) // stable per key, like kind
