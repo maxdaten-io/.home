@@ -143,6 +143,17 @@ function sessionName(w, a) {
   return (w.title ?? "").replace(GLYPH, "");
 }
 
+// A row's [name, worktree badge]. A session in a worktree shows both; when its
+// name is no better than the folder or the repo (`cw new` titles the workspace
+// after the root), the worktree name alone. The main checkout's pill says it all.
+function rowName(r, a) {
+  const tree = base(r.path);
+  if (r.path === r.root && !r.session) return ["", ""];
+  const name = r.w ? sessionName(r.w, a) : "";
+  if (r.session) return [name || tree, ""];
+  return !name || name === tree || name === base(r.root) ? [tree, ""] : [name, tree];
+}
+
 // --- model ---------------------------------------------------------------------
 // The main checkout is exactly one workspace per repo: the one stamped
 // "cw:<root>" (made by `cw new`/`cw here`, or by tapping its row). Every other
@@ -510,10 +521,8 @@ function worktreeRow(e) {
   const r = () => e().row;
   const a = () => r().agent;
   const isMain = () => r().path === r().root && !r().session;
-  const name = () => {
-    const label = isMain() ? "" : r().session ? sessionName(r().w, a()) || base(r().path) : base(r().path);
-    return label + (r().others ? "  +" + r().others : "");
-  };
+  const name = () => rowName(r(), a())[0] + (r().others ? "  +" + r().others : "");
+  const tree = () => rowName(r(), a())[1];
   const branch = () => r().tab?.branch ?? (isMain() ? r().w?.branch : null);
   // cmux exposes only a dirty Bool, not starship's !/?/+ split: "!" stands for
   // any change, untracked included.
@@ -550,12 +559,17 @@ function worktreeRow(e) {
   const body = VStack({ spacing: 1, alignment: "leading" }, [
     HStack({ spacing: 6 }, [
       lead,
-      Text(name).font(13).lineLimit(1).truncation(e().row.session ? "tail" : "middle") // titles read left to right, paths at both ends
+      Text(name).font(13).lineLimit(1).truncation("tail")
         .weight(() => (selected() ? "semibold" : "regular"))
         .color(() => (selected() ? "primary" : r().w ? "secondary" : "tertiary")),
       // Sessions carry starship's "!" after the name; the main pill has its own.
       Text("!").font(12).weight("bold").color(GIT).opacity(() => (dirty() && !isMain() ? 1 : 0))
         .frame(() => ({ width: dirty() && !isMain() ? 8 : 0 })),
+      // The worktree a session runs in, as a branch-style chip.
+      Text(() => (tree() ? NF.branch + " " + tree() : "")).font(10).weight("medium").color(GIT)
+        .paddingHorizontal(() => (tree() ? 5 : 0))
+        .background(() => (tree() ? GIT + "26" : null)).cornerRadius(6)
+        .lineLimit(1).truncation("middle").frame(() => ({ maxWidth: tree() ? 90 : 0 })), // the session name gets the room
       Spacer({ minLength: 4 }),
       // Badges keep their width; the name truncates instead (docs: priority 2).
       Text(() => (r().w?.pr ? NF.pull + " " + r().w.pr.number : "")).font(10).weight("semibold").color(PR)
