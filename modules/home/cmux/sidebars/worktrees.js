@@ -91,7 +91,14 @@ const GROUPS = [
 ];
 const rankOf = (a) => STATUS[a?.status]?.rank ?? 9; // no agent ranks last
 const groupOf = (r) => (r.agent?.status === "needs_input" || r.agent?.status === "working" ? r.agent.status : "idle");
-const stampOf = (w) => (w.description?.startsWith("cw:") ? w.description.slice(3) : null);
+// Workflow subagents each run in a wf_* worktree, and their hook events move
+// the parent agent's reported directory there and back: that is never where the
+// session lives, so it folds to the repo root (stamps written from it too).
+const ownDir = (p) => (p && /\/wf_[^/]+(\/|$)/.test(p) ? rootOf(p) : p);
+function stampOf(w) {
+  const s = w.description?.startsWith("cw:") && w.description.slice(3);
+  return s && ownDir(s) === s ? s : null;
+}
 const isGit = (w) => !!(w.branch || (w.tabs ?? []).some((t) => t.branch));
 
 // data.clock() is documented but undefined in the JS runtime (TypeError seen
@@ -182,7 +189,7 @@ function collectRows(ws) {
     if (w.pinned) continue; // triage views render separately
     for (const a of w.agents ?? []) {
       if (a.status === "ended") continue;
-      const path = a.directory ?? stampOf(w) ?? w.directory ?? "";
+      const path = ownDir(a.directory) ?? stampOf(w) ?? w.directory ?? "";
       if (!path) continue;
       const atRoot = rootOf(path) === path;
       put(atRoot ? "s:" + w.id : path, path, w, a, secs(a.lastActivityAt ?? a.sinceEpoch ?? 0), atRoot);

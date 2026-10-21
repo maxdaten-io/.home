@@ -22,4 +22,16 @@ const left = [{ id: "left", directory: R, description: "cw:" + W, tabs: [], agen
 const rows = collectRows(left).map((r) => r.path);
 console.log(JSON.stringify(rows));
 const one = rows.length === 1 && rows[0] === R;
-console.log(one ? "ok   left worktree: one row, at the root" : "FAIL"); process.exit(one ? 0 : 1);
+console.log(one ? "ok   left worktree: one row, at the root" : "FAIL"); if (!one) process.exit(1);
+// Workflow subagents run in wf_* worktrees and their hook events move the
+// parent's reported directory: the session stays at the root, unstamped, even
+// over a stamp an earlier tick wrote from such an event.
+calls.length = 0;
+const wf = [
+  { id: "wf", directory: R, tabs: [], agents: [{ status: "working", directory: R + "/.claude/worktrees/wf_ddddbc08-1d4-6" }] },
+  { id: "wf-stamped", directory: R, description: "cw:" + R + "/.claude/worktrees/wf_ddddbc08-1d4-1", tabs: [], agents: [{ status: "working", directory: R + "/.claude/worktrees/wf_ddddbc08-1d4-2" }] },
+];
+const wfRows = collectRows(wf).map((r) => r.path + (r.session ? " session" : ""));
+console.log(JSON.stringify({ wfRows, calls }));
+const sub = JSON.stringify(wfRows) === JSON.stringify([R + " session", R + " session"]) && calls.length === 0;
+console.log(sub ? "ok   wf_ subagent dirs: root session rows, no stamp" : "FAIL"); process.exit(sub ? 0 : 1);
