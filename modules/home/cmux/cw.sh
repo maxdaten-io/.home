@@ -149,6 +149,13 @@ cmd_new() {
   # The stamp is how `cw done` finds this workspace again, and how the sidebar
   # learns the worktree path (the claude pane's cwd is the repo root, not $wt).
   cmux workspace-action --action set-description --workspace "$ws" --description "cw:$wt" >/dev/null
+  # devenv trusts directories one path at a time, so a fresh worktree of an
+  # allowed repo starts untrusted and the shell tab below would only print
+  # "not allowed". It is our own checkout: trust it (writes the allow list only).
+  # devenv comes from PATH, the same one the shell hook uses.
+  if [[ -f $wt/devenv.nix ]] && command -v devenv >/dev/null; then
+    (cd "$wt" && devenv allow >/dev/null 2>&1) || echo "cw: devenv allow failed in $wt" >&2
+  fi
 
   # lazygit first, shell second: the newest tab ends up selected, and there is
   # no CLI verb to select a tab. lazygit gets explicit -w/-g instead of a `cd`:
