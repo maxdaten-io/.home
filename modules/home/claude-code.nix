@@ -251,6 +251,24 @@
         worth attacking.
       '';
 
+      # Verbatim from `rex skill setup`, so `rex skill status` reports it current.
+      # The guide itself comes from the installed Rex at run time.
+      rexSkill = ''
+        ---
+        name: rex
+        description: Use the rex CLI to manage Rex sessions, open tabs, arrange panes, run commands, inspect terminal output, and control connected Rex apps.
+        metadata:
+          rex-stub: "2"
+        ---
+        <!-- Installed by "rex skill setup". Remove it with "rex skill remove". -->
+
+        Run `rex __internal skill` and follow the guide it prints. The guide comes from
+        the installed Rex CLI, so it describes the commands available in that version.
+
+        If the command fails, the installed Rex version predates the guide. Start with
+        `rex whoami --json`, then use `rex --help` and `rex COMMAND --help`.
+      '';
+
       # /audit-skills — user-invoked only (disable-model-invocation), so it costs
       # no context until typed. Rules distilled from Anthropic's skill-authoring
       # and Fable 5 prompting guides; the skill re-reads both at run time.
@@ -306,6 +324,7 @@
         "skills/archify".source = archify;
         "skills/use-spark".source = "${spark-cli-skills}/skills/use-spark";
         "skills/audit-skills/SKILL.md".text = auditSkillsSkill;
+        "skills/rex/SKILL.md".text = rexSkill;
       };
 
       # Trims the system prompt sent on every request — recipe:
@@ -337,17 +356,34 @@
         # Events nothing else uses: jq `*` replaces arrays wholesale, and
         # Stop/PostToolUse hold superset's and the statusline's hooks.
         # Notification fires when a turn ends waiting on you, so a PR opened
-        # in that turn shows up then.
-        hooks = pkgs.lib.genAttrs [ "SessionStart" "Notification" ] (_: [
+        # in that turn shows up then. `rex skill setup` can't add its SessionStart
+        # hook for the same reason: the next switch would replace the array.
+        hooks =
+          let
+            cmuxPr = {
+              hooks = [
+                {
+                  type = "command";
+                  command = "${claude-cmux-pr}/bin/claude-cmux-pr";
+                }
+              ];
+            };
+          in
           {
-            hooks = [
+            SessionStart = [
+              cmuxPr
               {
-                type = "command";
-                command = "${claude-cmux-pr}/bin/claude-cmux-pr";
+                hooks = [
+                  {
+                    type = "command";
+                    command = "/bin/sh -c 'rex __internal session-start --agent claude 2>/dev/null || true'";
+                    timeout = 5;
+                  }
+                ];
               }
             ];
-          }
-        ]);
+            Notification = [ cmuxPr ];
+          };
         statusLine = {
           type = "command";
           command = "~/.claude/statusline-command";
@@ -437,6 +473,10 @@
 
       home.packages = with pkgs; [
         notebooklm
+        # Rex only sets REX_BIN_DIR; the skill and hook above call a bare `rex`.
+        (writeShellScriptBin "rex" ''
+          exec "$HOME/Library/Application Support/com.superlogical.rex/RexServer/Versions/Current/Rex Server.app/Contents/MacOS/rex" "$@"
+        '')
         (
           let
             claudeCodeVersion = "2.1.312";
