@@ -87,7 +87,11 @@ content_sessions() {
 # flip it; the repo root in CS_REPO. Env, not argv: "" (all) would not survive
 # fzf's transform quoting. The query comes from fzf's own FZF_QUERY.
 scope_root() { [[ $(<"$CS_SCOPE") == all ]] || echo "$CS_REPO"; }
-scope_label() { [[ $(<"$CS_SCOPE") == all ]] && echo claude || echo "${CS_REPO##*/}"; }
+# The label lands inside fzf action syntax (change-prompt(…)+reload(…)), so a
+# directory named `x)+execute(…)` would inject actions: keep [A-Za-z0-9._-].
+scope_label() {
+  if [[ $(<"$CS_SCOPE") == all ]]; then echo claude; else tr -c 'A-Za-z0-9._\n-' '_' <<<"${CS_REPO##*/}"; fi
+}
 self=${CS_SELF:-$0}
 
 case ${1:-} in
