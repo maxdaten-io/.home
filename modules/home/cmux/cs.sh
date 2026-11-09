@@ -5,13 +5,14 @@
 #              plus its worktrees (<root>/… and <root>.worktrees/…), so a
 #              session started in any worktree shows up from anywhere in it.
 #              Outside git: sessions whose cwd is dir or below it.
-#   cs -a      every session of both accounts; profile, repo and worktree are
-#              columns, so typing "frontrow katchup" filters by them.
+#   cs -a      start on every session of both accounts; profile, repo and
+#              worktree are columns, so typing "frontrow katchup" filters by them.
 #   --rex      enter opens the session in a new Rex tab instead of exec'ing it
-#              here (the init.lua popup runs `cs -a --rex`).
+#              here (the init.lua popup runs `cs --rex` in the pane's directory).
 #
-# ctrl-/ toggles content search: the query's words must all appear in the
-# transcript (rg, case-insensitive, raw JSONL so tool output counts too).
+# ctrl-a toggles between dir's repo and all sessions. ctrl-/ toggles content
+# search: the query's words must all appear in the transcript (rg,
+# case-insensitive, raw JSONL so tool output counts too).
 #
 # Index and preview come from sessions-lib.sh (shared with `cw sessions`, same
 # cache). Unlike cw, no cmux: enter cds into the session's directory (the root
@@ -82,13 +83,37 @@ content_sessions() {
   done
 }
 
+# Scope (repo or all) lives in the file CS_SCOPE so fzf callbacks can read and
+# flip it; the repo root in CS_REPO. Env, not argv: "" (all) would not survive
+# fzf's transform quoting. The query comes from fzf's own FZF_QUERY.
+scope_root() { [[ $(<"$CS_SCOPE") == all ]] || echo "$CS_REPO"; }
+scope_label() { [[ $(<"$CS_SCOPE") == all ]] && echo claude || echo "${CS_REPO##*/}"; }
+self=${CS_SELF:-$0}
+
 case ${1:-} in
-# fzf callbacks: the root comes from CS_ROOT, not argv, so "" (all repos)
-# survives fzf's transform quoting; the query from fzf's own FZF_QUERY.
---list) list_repo_sessions "${CS_ROOT-}" && exit ;;
---refresh) index_sessions && list_repo_sessions "${CS_ROOT-}" && exit ;;
---content) content_sessions "${CS_ROOT-}" "${FZF_QUERY-}" && exit ;;
+--list) list_repo_sessions "$(scope_root)" && exit ;;
+--refresh) index_sessions && list_repo_sessions "$(scope_root)" && exit ;;
+--content) content_sessions "$(scope_root)" "${FZF_QUERY-}" && exit ;;
 --preview) shift && preview_session "$@" && exit ;;
+# The two toggles print fzf actions for `transform:`. Content mode is "prompt
+# starts with grep": fzf's own matching is off, each keystroke reloads from rg.
+--toggle-scope)
+  [[ $(<"$CS_SCOPE") == all ]] && echo repo >"$CS_SCOPE" || echo all >"$CS_SCOPE"
+  if [[ ${FZF_PROMPT-} == grep* ]]; then
+    echo "change-prompt(grep $(scope_label) › )+reload($self --content)"
+  else
+    echo "change-prompt($(scope_label) › )+reload($self --list)"
+  fi
+  exit
+  ;;
+--toggle-grep)
+  if [[ ${FZF_PROMPT-} == grep* ]]; then
+    echo "change-prompt($(scope_label) › )+enable-search+reload($self --list)"
+  else
+    echo "change-prompt(grep $(scope_label) › )+disable-search+reload($self --content)"
+  fi
+  exit
+  ;;
 -h | --help)
   echo "usage: cs [-a] [--rex] [dir]   pick a claude session of dir's repo (default \$PWD), or of all repos (-a), and resume it" >&2
   exit 2
@@ -105,15 +130,12 @@ while [[ ${1:-} == -* ]]; do
   shift
 done
 
-if ((all)); then
-  root="" prompt="claude › "
-else
-  root=$(repo_root "${1:-$PWD}") || exit 1
-  prompt="${root##*/} › "
-fi
-self=${CS_SELF:-$0}
-q=$(printf '%q' "$root")
-export CS_ROOT=$root
+CS_REPO=$(repo_root "${1:-$PWD}") || exit 1
+CS_SCOPE=$(mktemp "${TMPDIR:-/tmp}/cs-scope.XXXXXX")
+export CS_REPO CS_SCOPE
+trap 'rm -f "$CS_SCOPE"' EXIT
+((all)) && echo all >"$CS_SCOPE" || echo repo >"$CS_SCOPE"
+q=$(printf '%q' "$CS_REPO")
 if [[ ! -f $CACHE ]]; then
   echo "cs: first run, indexing all transcripts (can take ~1 min)…" >&2
   index_sessions
@@ -122,22 +144,22 @@ fi
 # Opens at once on the cached list; the start binding re-indexes behind it.
 # Process substitution, not a pipe: the reload abandons the initial stream, its
 # writer dies of SIGPIPE, and under pipefail that failed the whole pick.
-# Content mode is "prompt starts with grep": fzf's own matching is disabled and
-# every keystroke reloads from rg instead.
 pick=$(fzf --ansi --delimiter $'\t' --with-nth 5 --with-shell 'bash -c' \
-  --no-sort --layout=reverse --info=inline-right --prompt "$prompt" \
-  --header 'enter resume · ctrl-/ search content · ctrl-r refresh' \
+  --no-sort --layout=reverse --info=inline-right --prompt "$(scope_label) › " \
+  --header 'enter resume · ctrl-a repo/all · ctrl-/ search content · ctrl-r refresh' \
   --preview "$self --preview {1} {2} $q" --preview-window 'down,45%,wrap,border-top' \
   --bind "start:reload($self --refresh)" \
   --bind "ctrl-r:reload($self --refresh)" \
-  --bind "ctrl-/:transform:if [[ \$FZF_PROMPT == grep* ]]; then echo 'change-prompt($prompt)+enable-search+reload($self --list)'; else echo 'change-prompt(grep › )+disable-search+reload($self --content)'; fi" \
+  --bind "ctrl-a:transform:$self --toggle-scope" \
+  --bind "ctrl-/:transform:$self --toggle-grep" \
   --bind "change:transform:[[ \$FZF_PROMPT != grep* ]] || echo 'reload($self --content)'" \
-  < <(list_repo_sessions "$root")) || exit 0
+  < <(list_repo_sessions "$(scope_root)")) || exit 0
+rm -f "$CS_SCOPE" # exec below skips the EXIT trap
 
 IFS=$'\t' read -r f cwd account label _ <<<"$pick"
 dir=$cwd
 if [[ ! -d $dir ]]; then # worktree gone: its repo (same guess as the list), else ~
-  dir=${root:-${cwd%%/.claude/worktrees/*}} dir=${dir%%.worktrees/*}
+  dir=${cwd%%/.claude/worktrees/*} dir=${dir%%.worktrees/*}
   [[ -d $dir ]] || dir=$HOME
 fi
 id=$(basename "$f" .jsonl)
