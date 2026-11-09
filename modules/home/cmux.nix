@@ -27,13 +27,26 @@
           pkgs.gnused
           pkgs.jq
         ];
-        text = builtins.readFile ./cmux/cw.sh;
+        text = builtins.readFile ./cmux/sessions-lib.sh + builtins.readFile ./cmux/cw.sh;
+      };
+
+      # One repo's claude sessions in fzf, resumed in place; see cmux/cs.sh.
+      cs = pkgs.writeShellApplication {
+        name = "cs";
+        runtimeInputs = [
+          pkgs.coreutils
+          pkgs.fzf
+          pkgs.git
+          pkgs.jq
+        ];
+        text = builtins.readFile ./cmux/sessions-lib.sh + builtins.readFile ./cmux/cs.sh;
       };
     in
     lib.mkIf pkgs.stdenv.isDarwin {
       home.packages = [
         cmux
         cw
+        cs
       ];
 
       # Out-of-store on purpose: cmux hot-reloads sidebars on save, a store

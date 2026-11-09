@@ -4,7 +4,8 @@
 
 - `sidebars/worktrees.js` is symlinked out of the store, so saving hot-reloads it.
   No `just switch` needed.
-- `cw.sh` is packaged by `../cmux.nix` and only changes after `just switch`.
+- `cw.sh`, `cs.sh` and their shared `sessions-lib.sh` (session index, prepended
+  to both) are packaged by `../cmux.nix` and only change after `just switch`.
 
 ## The live sidebar
 
