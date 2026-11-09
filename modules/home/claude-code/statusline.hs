@@ -16,7 +16,8 @@ import System.Console.Terminal.Size (hSize, width)
 import System.Environment (getEnvironment, lookupEnv)
 import System.Exit (ExitCode (..))
 import System.FilePath (takeFileName)
-import System.IO (IOMode (ReadMode), hClose, openFile)
+import GHC.IO.Encoding (setLocaleEncoding, utf8)
+import System.IO (IOMode (ReadMode), hClose, hSetEncoding, openFile, stdout)
 import System.Process (CreateProcess (env), proc, readCreateProcessWithExitCode)
 
 --------------------- JSON schema types -----------------------
@@ -191,6 +192,13 @@ isGitRepo cwd = do
 
 main :: IO ()
 main = do
+    -- The output is powerline/Nerd Font glyphs. GHC encodes Handles with the
+    -- locale's encoding: on Linux without a UTF-8 LANG that is ASCII, and the
+    -- starship pipe aborts with `recoverEncode` (the nix build sandbox has no
+    -- LANG, so checks.x86_64-linux.statusline failed). Pipes made later
+    -- inherit setLocaleEncoding; stdout already exists, so set it directly.
+    setLocaleEncoding utf8
+    hSetEncoding stdout utf8
     input <- BL.getContents
     let si = fromMaybe emptyInput (decode input)
 
