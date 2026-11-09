@@ -99,6 +99,13 @@
         ];
         text = builtins.readFile ./claude-code/cmux-pr.sh;
       };
+      # Hook: Rex context; session named by profile, tab named by task (see script).
+      # rex comes from PATH, like cmux.
+      claude-rex-session-start = pkgs.writeShellApplication {
+        name = "claude-rex-session-start";
+        runtimeInputs = [ pkgs.jq ];
+        text = builtins.readFile ./claude-code/rex-session-start.sh;
+      };
       claudeMd = ''
         # User Instructions
 
@@ -376,7 +383,7 @@
                 hooks = [
                   {
                     type = "command";
-                    command = "/bin/sh -c 'rex __internal session-start --agent claude 2>/dev/null || true'";
+                    command = "${claude-rex-session-start}/bin/claude-rex-session-start";
                     timeout = 5;
                   }
                 ];
