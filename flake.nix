@@ -43,10 +43,10 @@
     # https://github.com/mightyiam/dendritic)
     import-tree.url = "github:vic/import-tree";
 
-    # Raspberry Pi
-    raspberry-pi-nix = {
-      url = "github:nix-community/raspberry-pi-nix/v0.4.0";
-    };
+    # Raspberry Pi. Its nixpkgs is deliberately not followed: the vendor kernel
+    # and firmware come prebuilt from nixos-raspberrypi.cachix.org only for its
+    # own pin; following ours would compile the kernel on the Pi.
+    nixos-raspberrypi.url = "github:nvmd/nixos-raspberrypi/main";
 
     # System Tools
     home-manager = {

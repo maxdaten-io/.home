@@ -32,9 +32,11 @@ Work in the checkout you are given and commit to `main`. Reach for
 nix eval .#darwinConfigurations."Jan-Philips-MacBook-Pro".config.system.build.toplevel.drvPath
 ```
 
-**Known pre-existing CI red:** `Check Flake` fails with `attribute 'buildDTBs' missing` — raspberry-pi-nix v0.4.0 against current nixpkgs. This predates
-current work, so judge a change by whether it adds *new* failures.
-`Check Formatting` must stay green.
+CI (`Check Flake` = `nix flake check --all-systems`, `Check Formatting`) must
+stay green. The Pi is the fragile part: it evaluates on our nixpkgs but takes
+its kernel prebuilt from nvmd/nixos-raspberrypi's own pin, so a nixpkgs bump
+can fail Pi eval on a kernel attribute that pin predates — see the
+`boot.kernelPackages` comment in `modules/hosts/pi/raspberry-pi.nix`.
 
 ## Architecture
 

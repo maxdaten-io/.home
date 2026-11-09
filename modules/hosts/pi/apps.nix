@@ -64,7 +64,8 @@ in
               coreutils
             ];
             text = ''
-              export img="${nixos.config.system.build.sdImage}/sd-image/${nixos.config.sdImage.imageName}.zst"
+              # image.filePath = sd-image/<fileName>, already ending in .img.zst
+              export img="${nixos.config.system.build.sdImage}/${nixos.config.image.filePath}"
               echo "Flashing SD card: $img"
               read -p "Write image $img? (This may take a while) [yn]: " -r WRITE_IMAGE
 
