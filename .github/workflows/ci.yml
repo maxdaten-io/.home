@@ -21,8 +21,14 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
 
-      - name: Check flake
-        run: nix flake check --all-systems --show-trace
+      # Evaluate every system's outputs (darwin hosts, the aarch64 Pi), but
+      # build only this runner's checks: current Nix builds --all-systems
+      # checks too, and a linux runner can't build the darwin ones.
+      - name: Evaluate flake (all systems)
+        run: nix flake check --all-systems --no-build --show-trace
+
+      - name: Build checks (x86_64-linux)
+        run: nix flake check --show-trace
 
   check-formatting:
     name: Check Formatting
