@@ -6,6 +6,8 @@
   No `just switch` needed.
 - `cw.sh`, `cs.sh` and their shared `sessions-lib.sh` (session index, prepended
   to both) are packaged by `../cmux.nix` and only change after `just switch`.
+- `cs -a --rex` is also the Rex picker popup (`cmd+j`, `../rex/init.lua`): all
+  sessions of both accounts, enter opens the pick in a new Rex tab.
 
 ## The live sidebar
 

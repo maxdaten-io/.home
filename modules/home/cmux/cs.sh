@@ -1,10 +1,17 @@
 # shellcheck shell=bash
-# cs — fzf over the claude sessions of one repo, resume the pick right here.
+# cs — fzf over claude sessions, resume the pick right here.
 #
 #   cs [dir]   dir defaults to $PWD. Inside git, "the repo" is the main checkout
 #              plus its worktrees (<root>/… and <root>.worktrees/…), so a
 #              session started in any worktree shows up from anywhere in it.
 #              Outside git: sessions whose cwd is dir or below it.
+#   cs -a      every session of both accounts; profile, repo and worktree are
+#              columns, so typing "frontrow katchup" filters by them.
+#   --rex      enter opens the session in a new Rex tab instead of exec'ing it
+#              here (the init.lua popup runs `cs -a --rex`).
+#
+# ctrl-/ toggles content search: the query's words must all appear in the
+# transcript (rg, case-insensitive, raw JSONL so tool output counts too).
 #
 # Index and preview come from sessions-lib.sh (shared with `cw sessions`, same
 # cache). Unlike cw, no cmux: enter cds into the session's directory (the root
@@ -23,43 +30,90 @@ repo_root() {
   fi
 }
 
-# Records: file, cwd, account dir, display — newest first.
+# Records: file, cwd, account dir, tab label, display — newest first.
+# root "" lists every session; the repo is then guessed from the path alone
+# (no git per row: ~700 transcripts) by stripping the two worktree layouts.
 list_repo_sessions() {
-  local root=$1 now mtime f cwd branch title rel disp AGE
+  local root=$1 now mtime f cwd branch title rel repo prof disp AGE
   [[ -f $CACHE ]] || return 0
   now=$(date +%s)
   sort -t $'\t' -k1,1nr "$CACHE" | while IFS=$'\t' read -r mtime f cwd branch title; do
-    case $cwd in
-    "$root") rel="" ;;
-    "$root"/* | "$root".worktrees/*)
-      rel=${cwd#"$root"} rel=${rel#/} rel=${rel#.claude/worktrees/} rel=${rel#.worktrees/}
-      ;;
-    *) continue ;;
-    esac
+    [[ -n $cwd ]] || continue
+    if [[ -n $root ]]; then
+      repo=$root
+      case $cwd in "$root" | "$root"/* | "$root".worktrees/*) ;; *) continue ;; esac
+    else
+      repo=${cwd%%/.claude/worktrees/*}
+      [[ $repo != "$cwd" || $cwd != *.worktrees/* ]] || repo=${cwd%%.worktrees/*}
+    fi
+    rel=${cwd#"$repo"} rel=${rel#/} rel=${rel#.claude/worktrees/} rel=${rel#.worktrees/}
     [[ -d $cwd ]] || rel+="${rel:+ }(gone)"
     fmt_age $((now - mtime))
-    title=${title#"${title%%[! ]*}"}
-    disp=$'\e[2m'$AGE$'\e[0m  '$title
+    title=${title#"${title%%[! ]*}"} title=${title%"${title##*[! ]}"}
+    disp=$'\e[2m'$AGE$'\e[0m  '
+    if [[ -z $root ]]; then
+      prof=${f%%/projects/*} prof=${prof##*/.claude} prof=${prof#-}
+      disp+=$'\e[35m'${prof:-private}$'\e[0m \e[34m'${repo##*/}$'\e[0m  '
+    fi
+    disp+=$title
     [[ -z $rel ]] || disp+=$'  \e[33m▸ '$rel$'\e[0m'
     [[ -z $branch || $branch == main || $branch == master || $rel == *"${branch#worktree-}"* ]] ||
       disp+=$'  \e[2m('$branch$')\e[0m'
-    printf '%s\t%s\t%s\t%s\n' "$f" "$cwd" "${f%%/projects/*}" "$disp"
+    printf '%s\t%s\t%s\t%s\t%s\n' "$f" "$cwd" "${f%%/projects/*}" "${title:0:40}" "$disp"
+  done
+}
+
+# list_repo_sessions narrowed to transcripts containing every word of $2.
+# Each rg pass only reads the survivors of the last; ~70ms over 1 GB warm.
+content_sessions() {
+  local root=$1 terms t f files=()
+  read -ra terms <<<"$2"
+  shopt -s nullglob
+  for t in "${SESSION_DIRS[@]}"; do files+=("$t"/*/*.jsonl); done
+  shopt -u nullglob
+  for t in "${terms[@]}"; do
+    ((${#files[@]})) || break
+    mapfile -t files < <(rg -l -F -i -- "$t" "${files[@]}" || true)
+  done
+  local -A hit=()
+  for f in "${files[@]}"; do hit[$f]=1; done
+  list_repo_sessions "$root" | while IFS= read -r line; do
+    [[ -z ${hit[${line%%$'\t'*}]:-} ]] || printf '%s\n' "$line"
   done
 }
 
 case ${1:-} in
---list) list_repo_sessions "$2" && exit ;;
---refresh) index_sessions && list_repo_sessions "$2" && exit ;;
+# fzf callbacks: the root comes from CS_ROOT, not argv, so "" (all repos)
+# survives fzf's transform quoting; the query from fzf's own FZF_QUERY.
+--list) list_repo_sessions "${CS_ROOT-}" && exit ;;
+--refresh) index_sessions && list_repo_sessions "${CS_ROOT-}" && exit ;;
+--content) content_sessions "${CS_ROOT-}" "${FZF_QUERY-}" && exit ;;
 --preview) shift && preview_session "$@" && exit ;;
 -h | --help)
-  echo "usage: cs [dir]   pick a claude session of dir's repo (default \$PWD) and resume it" >&2
+  echo "usage: cs [-a] [--rex] [dir]   pick a claude session of dir's repo (default \$PWD), or of all repos (-a), and resume it" >&2
   exit 2
   ;;
 esac
 
-root=$(repo_root "${1:-$PWD}") || exit 1
+all=0 rex=0
+while [[ ${1:-} == -* ]]; do
+  case $1 in
+  -a | --all) all=1 ;;
+  --rex) rex=1 ;;
+  *) echo "cs: unknown flag $1" >&2 && exit 2 ;;
+  esac
+  shift
+done
+
+if ((all)); then
+  root="" prompt="claude › "
+else
+  root=$(repo_root "${1:-$PWD}") || exit 1
+  prompt="${root##*/} › "
+fi
 self=${CS_SELF:-$0}
 q=$(printf '%q' "$root")
+export CS_ROOT=$root
 if [[ ! -f $CACHE ]]; then
   echo "cs: first run, indexing all transcripts (can take ~1 min)…" >&2
   index_sessions
@@ -68,15 +122,27 @@ fi
 # Opens at once on the cached list; the start binding re-indexes behind it.
 # Process substitution, not a pipe: the reload abandons the initial stream, its
 # writer dies of SIGPIPE, and under pipefail that failed the whole pick.
-pick=$(fzf --ansi --delimiter $'\t' --with-nth 4 --with-shell 'bash -c' \
-  --no-sort --layout=reverse --info=inline-right --prompt "${root##*/} › " \
-  --header 'enter resume · ctrl-r refresh' \
+# Content mode is "prompt starts with grep": fzf's own matching is disabled and
+# every keystroke reloads from rg instead.
+pick=$(fzf --ansi --delimiter $'\t' --with-nth 5 --with-shell 'bash -c' \
+  --no-sort --layout=reverse --info=inline-right --prompt "$prompt" \
+  --header 'enter resume · ctrl-/ search content · ctrl-r refresh' \
   --preview "$self --preview {1} {2} $q" --preview-window 'down,45%,wrap,border-top' \
-  --bind "start:reload($self --refresh $q)" \
-  --bind "ctrl-r:reload($self --refresh $q)" < <(list_repo_sessions "$root")) || exit 0
+  --bind "start:reload($self --refresh)" \
+  --bind "ctrl-r:reload($self --refresh)" \
+  --bind "ctrl-/:transform:if [[ \$FZF_PROMPT == grep* ]]; then echo 'change-prompt($prompt)+enable-search+reload($self --list)'; else echo 'change-prompt(grep › )+disable-search+reload($self --content)'; fi" \
+  --bind "change:transform:[[ \$FZF_PROMPT != grep* ]] || echo 'reload($self --content)'" \
+  < <(list_repo_sessions "$root")) || exit 0
 
-IFS=$'\t' read -r f cwd account _ <<<"$pick"
+IFS=$'\t' read -r f cwd account label _ <<<"$pick"
 dir=$cwd
-[[ -d $dir ]] || dir=$root
+if [[ ! -d $dir ]]; then # worktree gone: its repo (same guess as the list), else ~
+  dir=${root:-${cwd%%/.claude/worktrees/*}} dir=${dir%%.worktrees/*}
+  [[ -d $dir ]] || dir=$HOME
+fi
+id=$(basename "$f" .jsonl)
+if ((rex)); then
+  exec rex window new -s "$REX_SESSION" "$label" -c "$dir" -- env CLAUDE_CONFIG_DIR="$account" claude --resume "$id"
+fi
 cd "$dir" || exit 1
-exec env CLAUDE_CONFIG_DIR="$account" claude --resume "$(basename "$f" .jsonl)"
+exec env CLAUDE_CONFIG_DIR="$account" claude --resume "$id"

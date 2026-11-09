@@ -21,6 +21,7 @@ let
     playwright-cli
     apfel
     cmux
+    rex
     indie-consultant
   ];
 in

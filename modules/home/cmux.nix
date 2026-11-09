@@ -30,7 +30,8 @@
         text = builtins.readFile ./cmux/sessions-lib.sh + builtins.readFile ./cmux/cw.sh;
       };
 
-      # One repo's claude sessions in fzf, resumed in place; see cmux/cs.sh.
+      # Claude sessions in fzf (one repo, or all with -a), resumed in place or
+      # in a Rex tab; see cmux/cs.sh. rex comes from PATH (../claude-code.nix).
       cs = pkgs.writeShellApplication {
         name = "cs";
         runtimeInputs = [
@@ -38,6 +39,7 @@
           pkgs.fzf
           pkgs.git
           pkgs.jq
+          pkgs.ripgrep
         ];
         text = builtins.readFile ./cmux/sessions-lib.sh + builtins.readFile ./cmux/cs.sh;
       };

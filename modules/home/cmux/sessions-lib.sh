@@ -48,6 +48,10 @@ index_sessions() {
   for d in "${SESSION_DIRS[@]}"; do files+=("$d"/*/*.jsonl); done
   shopt -u nullglob
   ((${#files[@]})) || return 0
+  # stat first, not in a process substitution: there its failure (e.g. BSD
+  # stat without -c) is invisible and the mv below replaced the cache with "".
+  local stats
+  stats=$(stat -c $'%Y\t%n' "${files[@]}") || return 1
   tmp=$(mktemp "${CACHE}.XXXXXX")
   while IFS=$'\t' read -r mtime f; do
     line=${cached[$f]:-}
@@ -56,7 +60,7 @@ index_sessions() {
     else
       printf '%s\t%s\n' "$mtime" "$(extract_session "$f")"
     fi
-  done < <(stat -c $'%Y\t%n' "${files[@]}") >"$tmp"
+  done <<<"$stats" >"$tmp"
   mv "$tmp" "$CACHE"
 }
 
