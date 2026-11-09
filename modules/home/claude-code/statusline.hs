@@ -16,7 +16,7 @@ import System.Console.Terminal.Size (hSize, width)
 import System.Environment (getEnvironment, lookupEnv)
 import System.Exit (ExitCode (..))
 import System.FilePath (takeFileName)
-import GHC.IO.Encoding (setLocaleEncoding, utf8)
+import GHC.IO.Encoding (setFileSystemEncoding, setForeignEncoding, setLocaleEncoding, utf8)
 import System.IO (IOMode (ReadMode), hClose, hSetEncoding, openFile, stdout)
 import System.Process (CreateProcess (env), proc, readCreateProcessWithExitCode)
 
@@ -192,11 +192,14 @@ isGitRepo cwd = do
 
 main :: IO ()
 main = do
-    -- The output is powerline/Nerd Font glyphs. GHC encodes Handles with the
-    -- locale's encoding: on Linux without a UTF-8 LANG that is ASCII, and the
-    -- starship pipe aborts with `recoverEncode` (the nix build sandbox has no
-    -- LANG, so checks.x86_64-linux.statusline failed). Pipes made later
-    -- inherit setLocaleEncoding; stdout already exists, so set it directly.
+    -- The output is powerline/Nerd Font glyphs, also handed to starship in
+    -- env vars. On Linux without a UTF-8 LANG, GHC's encodings are ASCII and
+    -- spawning starship aborts with `recoverEncode` (the nix build sandbox has
+    -- no LANG, so checks.x86_64-linux.statusline failed; macOS is always
+    -- UTF-8 for these). argv/env go through the file-system encoding, pipes
+    -- through the locale one; stdout already exists, so set it directly.
+    setFileSystemEncoding utf8
+    setForeignEncoding utf8
     setLocaleEncoding utf8
     hSetEncoding stdout utf8
     input <- BL.getContents
