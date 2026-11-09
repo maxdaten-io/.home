@@ -66,12 +66,14 @@ if [[ ! -f $CACHE ]]; then
 fi
 
 # Opens at once on the cached list; the start binding re-indexes behind it.
-pick=$(list_repo_sessions "$root" | fzf --ansi --delimiter $'\t' --with-nth 4 --with-shell 'bash -c' \
+# Process substitution, not a pipe: the reload abandons the initial stream, its
+# writer dies of SIGPIPE, and under pipefail that failed the whole pick.
+pick=$(fzf --ansi --delimiter $'\t' --with-nth 4 --with-shell 'bash -c' \
   --no-sort --layout=reverse --info=inline-right --prompt "${root##*/} › " \
   --header 'enter resume · ctrl-r refresh' \
   --preview "$self --preview {1} {2} $q" --preview-window 'down,45%,wrap,border-top' \
   --bind "start:reload($self --refresh $q)" \
-  --bind "ctrl-r:reload($self --refresh $q)") || exit 0
+  --bind "ctrl-r:reload($self --refresh $q)" < <(list_repo_sessions "$root")) || exit 0
 
 IFS=$'\t' read -r f cwd account _ <<<"$pick"
 dir=$cwd
