@@ -486,7 +486,7 @@
         '')
         (
           let
-            claudeCodeVersion = "2.1.319";
+            claudeCodeVersion = "2.1.321";
 
             # Since 2.1.114 the npm package is a stub (`bin/claude.exe`) that a
             # postinstall script replaces with a platform-specific native binary
@@ -498,19 +498,19 @@
             nativePlatforms = {
               "aarch64-darwin" = {
                 suffix = "darwin-arm64";
-                hash = "sha512-dyAOFnsXbeyGgFJMlo2n6zSgLli5r4fTZ3Tj48eELxjccqM4s/wUmQ6P0DyCbxU0EC44VV44T2qj5xEpen25aA==";
+                hash = "sha512-Cq4TmU0aidUvmnVMhmmAqNSG7jMZ60F5APqhyU/V3G9wv+65+H632FQTO8DSFQjQlNCuX8YJT8pm2dLXT5g9Aw==";
               };
               "x86_64-darwin" = {
                 suffix = "darwin-x64";
-                hash = "sha512-XuzaFESZRKPupllcbbFCy0xdw9G9+VHLWbXaJhJhUD4gNTmt/ALkKMnECwr3umA7if1cAGDNb2tcgRCIpIy+nQ==";
+                hash = "sha512-xZP3BLmnGDqV91ElWAqVREUaC3bLac/SakjgiBcclb3a630Cq55pQUlQ6hElrcYkxqU8viH7j+bFi7kREd2XaA==";
               };
               "aarch64-linux" = {
                 suffix = "linux-arm64";
-                hash = "sha512-PlyxaZTAuU0VF3P/ERF4+deMRjT57cr90SHCrYms3HTebr3eItEWJozw6zq9cs88tc8XoF9ESAIghKXfq9HACg==";
+                hash = "sha512-E37933bXQ/kXGBSrpKjrXdkaSbPEMbALp3I4ycS0fRMZCqntkHNoz6UXwEiJSmGbP0sBUqWCMCTGmVnSnEMJUg==";
               };
               "x86_64-linux" = {
                 suffix = "linux-x64";
-                hash = "sha512-FO4Sd23BO1VCQPiJe5vG3bNnmV5+YiTau7o1lqK3Fr5VlE4TLdKiyYpwQRwEXO91kE2l12Ep2i7J19T8Md2oOQ==";
+                hash = "sha512-lW+MhUThnU2hr6QnQ9xgD8c6OWAJbYNpiMzIQ4OJaLxcByTs53v7wV/2IzGspBbcMhnxFox1vvoltuWym/h6uw==";
               };
             };
 
@@ -529,10 +529,10 @@
 
             src = pkgs.fetchurl {
               url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${finalAttrs.version}.tgz";
-              hash = "sha256-czqSbBnfHITzWo5ChaY37c578t4TZyz+E6E5fv0L+CM=";
+              hash = "sha256-AK43uOFlviX/xAaLppgxewf6LTv1YUayH7gqyVDb8WE=";
             };
 
-            npmDepsHash = "sha256-Pu0EkQczijg4BfVwpiBIYsW8jjBLoIKloThPJC5yOzU=";
+            npmDepsHash = "sha256-7peyct2uKvJp50kPdzMzM8XbhuIHyvSSW+D4xWVOqEM=";
 
             strictDeps = true;
 
