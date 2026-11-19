@@ -106,6 +106,16 @@
         runtimeInputs = [ pkgs.jq ];
         text = builtins.readFile ./claude-code/rex-session-start.sh;
       };
+      # Manual picker: resume the sessions the hook above recorded per pane
+      # after a restart (see script; init.lua's claude_restore opens it).
+      rex-claude-restore = pkgs.writeShellApplication {
+        name = "rex-claude-restore";
+        runtimeInputs = [
+          pkgs.fzf
+          pkgs.jq
+        ];
+        text = builtins.readFile ./claude-code/rex-claude-restore.sh;
+      };
       claudeMd = ''
         # User Instructions
 
@@ -480,6 +490,7 @@
 
       home.packages = with pkgs; [
         notebooklm
+        rex-claude-restore
         # Rex only sets REX_BIN_DIR; the skill and hook above call a bare `rex`.
         (writeShellScriptBin "rex" ''
           exec "$HOME/Library/Application Support/com.superlogical.rex/RexServer/Versions/Current/Rex Server.app/Contents/MacOS/rex" "$@"
