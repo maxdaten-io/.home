@@ -42,3 +42,28 @@ rex.action({
   end,
 })
 rex.bind("cmd+j", "claude_sessions")
+
+-- After a restart: pick (space toggles) the Claude sessions the SessionStart
+-- hook recorded per pane and resume them there (`rex-claude-restore`, see
+-- ../claude-code/rex-claude-restore.sh). Manual only, never on Rex start.
+rex.action({
+  name = "claude_restore",
+  title = "Restore Claude Sessions…",
+  description = "Pick recorded Claude sessions and resume each in its Rex pane, or a new tab if the pane is gone.",
+  category = "Claude",
+  keywords = "claude session restore resume reboot restart panes",
+  run = function(ctx)
+    return rex.call("session.new_layer", {
+      session_id = ctx.session_id,
+      bounds = { 0.05, 0.05, 0.9, 0.9 },
+      focus = true,
+      layout = {
+        block = {
+          flavor = "com.superlogical.terminal.shell",
+          options = { command = { "env", "RCR_PAUSE=1", "rex-claude-restore" }, cwd = "" },
+        },
+      },
+    })
+  end,
+})
+rex.bind("shift+cmd+j", "claude_restore")
