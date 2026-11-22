@@ -13,11 +13,11 @@ commit_all="${git}commit[^;&|]*[[:space:]](-[[:alnum:]]*a[[:alnum:]]*|--all)([[:
 add_all="${git}add[^;&|]*[[:space:]](-A|--all|-u|--update|\.)([[:space:]]|$)"
 
 if grep -qE -e "$commit_all" -e "$add_all" <<<"$cmd"; then
-  cat >&2 <<'EOF'
+	cat >&2 <<'EOF'
 Blocked: this stages the whole tree, and parallel sessions share this checkout.
 Stage the paths you changed by name, then commit:
   git add path/one path/two && git commit -m "..."
 Check `git status` first; leave changes you didn't make unstaged.
 EOF
-  exit 2
+	exit 2
 fi

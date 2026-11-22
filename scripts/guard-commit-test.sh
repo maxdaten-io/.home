@@ -4,14 +4,14 @@ set -uo pipefail
 cd "$(dirname "$0")" || exit 1
 fail=0
 t() {
-  want=$1
-  shift
-  jq -n --arg c "$*" '{tool_input:{command:$c}}' | ./guard-commit.sh 2>/dev/null
-  got=$?
-  if [ "$got" != "$want" ]; then
-    echo "FAIL want=$want got=$got: $*"
-    fail=1
-  fi
+	want=$1
+	shift
+	jq -n --arg c "$*" '{tool_input:{command:$c}}' | ./guard-commit.sh 2>/dev/null
+	got=$?
+	if [ "$got" != "$want" ]; then
+		echo "FAIL want=$want got=$got: $*"
+		fail=1
+	fi
 }
 t 2 'git commit -qam "fix: x" && git push'
 t 2 'git commit -a -m "x"'

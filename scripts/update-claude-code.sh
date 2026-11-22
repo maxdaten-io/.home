@@ -21,30 +21,30 @@ GITHUB_REPO="https://github.com/anthropics/claude-code"
 
 # Resolve latest version from GitHub tags (more reliable for this package).
 resolve_latest_version() {
-  echo "Fetching latest version from GitHub tags…" >&2
-  git ls-remote --tags --refs "$GITHUB_REPO" |
-    sed 's|.*refs/tags/||' |
-    sed 's/^v//' |
-    sort -V |
-    tail -1
+	echo "Fetching latest version from GitHub tags…" >&2
+	git ls-remote --tags --refs "$GITHUB_REPO" |
+		sed 's|.*refs/tags/||' |
+		sed 's/^v//' |
+		sort -V |
+		tail -1
 }
 
 # Show changelog highlights after a successful update.
 # OLD_VERSION / NEW_VERSION are exported by the sourced lib at call time.
 # shellcheck disable=SC2153
 post_update_hook() {
-  local changelog
-  info "Changelog (${OLD_VERSION} → ${NEW_VERSION}):"
-  echo ""
+	local changelog
+	info "Changelog (${OLD_VERSION} → ${NEW_VERSION}):"
+	echo ""
 
-  changelog=$(curl -fsSL "${GITHUB_REPO}/raw/refs/heads/main/CHANGELOG.md" 2>/dev/null) || {
-    warn "Could not fetch changelog"
-    return 0
-  }
+	changelog=$(curl -fsSL "${GITHUB_REPO}/raw/refs/heads/main/CHANGELOG.md" 2>/dev/null) || {
+		warn "Could not fetch changelog"
+		return 0
+	}
 
-  # Print per-version sections oldest-first so the newest lands near the prompt.
-  local sections
-  sections=$(echo "$changelog" | awk -v target="$NEW_VERSION" -v current="$OLD_VERSION" '
+	# Print per-version sections oldest-first so the newest lands near the prompt.
+	local sections
+	sections=$(echo "$changelog" | awk -v target="$NEW_VERSION" -v current="$OLD_VERSION" '
     /^## / {
       v = $2
       gsub(/^v/, "", v)
@@ -61,28 +61,28 @@ post_update_hook() {
     }
   ')
 
-  printf "%s" "$sections"
+	printf "%s" "$sections"
 
-  # Ask claude itself to pick out the most impactful changes. Best-effort —
-  # if claude is unavailable (fresh install, offline, rate-limited) we skip
-  # the highlights and the per-version detail above is still useful.
-  if [ -z "$sections" ] || ! command -v claude >/dev/null 2>&1; then
-    return 0
-  fi
+	# Ask claude itself to pick out the most impactful changes. Best-effort —
+	# if claude is unavailable (fresh install, offline, rate-limited) we skip
+	# the highlights and the per-version detail above is still useful.
+	if [ -z "$sections" ] || ! command -v claude >/dev/null 2>&1; then
+		return 0
+	fi
 
-  # Feed claude the full OLD→NEW version range (the same `sections` printed
-  # above) so the highlights cover every bump when an update spans several
-  # releases — not just the newest one.
-  printf "\n## Highlights (%s → %s)\n\n" "$OLD_VERSION" "$NEW_VERSION"
-  local prompt="Summarize the most interesting and impactful changes across these claude-code releases as 5-8 short bullets. Focus on new features, behavior changes, and renamed/breaking items — skip routine bug fixes unless they fix something widely impactful. Output only the bullets, no preamble or trailing commentary."
-  # Run in a subshell with pipefail disabled so SIGPIPE / claude -p hiccups
-  # can't escape and abort the cosmetic highlights step.
-  (
-    set +o pipefail
-    printf "%s" "$sections" | claude -p "$prompt" --model haiku --tools "" 2>/dev/null
-  ) ||
-    warn "claude -p failed — skipping highlights"
-  return 0
+	# Feed claude the full OLD→NEW version range (the same `sections` printed
+	# above) so the highlights cover every bump when an update spans several
+	# releases — not just the newest one.
+	printf "\n## Highlights (%s → %s)\n\n" "$OLD_VERSION" "$NEW_VERSION"
+	local prompt="Summarize the most interesting and impactful changes across these claude-code releases as 5-8 short bullets. Focus on new features, behavior changes, and renamed/breaking items — skip routine bug fixes unless they fix something widely impactful. Output only the bullets, no preamble or trailing commentary."
+	# Run in a subshell with pipefail disabled so SIGPIPE / claude -p hiccups
+	# can't escape and abort the cosmetic highlights step.
+	(
+		set +o pipefail
+		printf "%s" "$sections" | claude -p "$prompt" --model haiku --tools "" 2>/dev/null
+	) ||
+		warn "claude -p failed — skipping highlights"
+	return 0
 }
 
 # ---------------------------------------------------------------------------
@@ -111,22 +111,22 @@ post_update_hook() {
 # Fix 1 – version
 # Patch `claudeCodeVersion = "..."` directly with sed.
 _fix_version() {
-  local new_version="$1"
-  sed -i "s|claudeCodeVersion = \"[^\"]*\"|claudeCodeVersion = \"${new_version}\"|" "$NIX_FILE"
-  ok "claudeCodeVersion = \"${new_version}\""
+	local new_version="$1"
+	sed -i "s|claudeCodeVersion = \"[^\"]*\"|claudeCodeVersion = \"${new_version}\"|" "$NIX_FILE"
+	ok "claudeCodeVersion = \"${new_version}\""
 }
 
 # Fix 2 – src hash
 # Fetch the main npm tarball and compute a sha256 SRI hash, then write it
 # only into the `src = pkgs.fetchurl` block.
 _fix_src_hash() {
-  local version="$1"
-  local url="https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz"
-  info "Fetching src hash for ${version}…"
-  local raw sri
-  raw=$(nix-prefetch-url "$url" 2>/dev/null) || die "nix-prefetch-url failed for ${url}"
-  sri=$(nix hash convert --to sri --hash-algo sha256 "$raw")
-  awk -v val="$sri" '
+	local version="$1"
+	local url="https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz"
+	info "Fetching src hash for ${version}…"
+	local raw sri
+	raw=$(nix-prefetch-url "$url" 2>/dev/null) || die "nix-prefetch-url failed for ${url}"
+	sri=$(nix hash convert --to sri --hash-algo sha256 "$raw")
+	awk -v val="$sri" '
     /src = pkgs\.fetchurl/ { in_src=1 }
     in_src && /hash = "/ {
       sub(/hash = "[^"]*"/, "hash = \"" val "\"")
@@ -134,7 +134,7 @@ _fix_src_hash() {
     }
     { print }
   ' "$NIX_FILE" >"${NIX_FILE}.tmp" && mv "${NIX_FILE}.tmp" "$NIX_FILE"
-  ok "src hash = \"${sri}\""
+	ok "src hash = \"${sri}\""
 }
 
 # Fix 3 – native platform hashes
@@ -142,28 +142,28 @@ _fix_src_hash() {
 # (@anthropic-ai/claude-code-darwin-arm64, etc.) whose dist.integrity fields
 # are sha512 SRI strings — exactly what goes in the nix file.
 _fix_native_hashes() {
-  local version="$1"
-  info "Updating native platform hashes…"
+	local version="$1"
+	info "Updating native platform hashes…"
 
-  # Format: "nix-system:npm-suffix"
-  local platforms=(
-    "aarch64-darwin:darwin-arm64"
-    "x86_64-darwin:darwin-x64"
-    "aarch64-linux:linux-arm64"
-    "x86_64-linux:linux-x64"
-  )
+	# Format: "nix-system:npm-suffix"
+	local platforms=(
+		"aarch64-darwin:darwin-arm64"
+		"x86_64-darwin:darwin-x64"
+		"aarch64-linux:linux-arm64"
+		"x86_64-linux:linux-x64"
+	)
 
-  for entry in "${platforms[@]}"; do
-    local nix_system="${entry%%:*}"
-    local suffix="${entry##*:}"
-    local pkg="@anthropic-ai/claude-code-${suffix}"
-    local integrity
-    integrity=$(npm view "${pkg}@${version}" dist.integrity 2>/dev/null) || {
-      warn "Could not fetch integrity for ${pkg}@${version} — skipping"
-      continue
-    }
-    # Patch the hash on the line immediately following `"nix_system" = {`
-    awk -v target="\"${nix_system}\"" -v val="$integrity" '
+	for entry in "${platforms[@]}"; do
+		local nix_system="${entry%%:*}"
+		local suffix="${entry##*:}"
+		local pkg="@anthropic-ai/claude-code-${suffix}"
+		local integrity
+		integrity=$(npm view "${pkg}@${version}" dist.integrity 2>/dev/null) || {
+			warn "Could not fetch integrity for ${pkg}@${version} — skipping"
+			continue
+		}
+		# Patch the hash on the line immediately following `"nix_system" = {`
+		awk -v target="\"${nix_system}\"" -v val="$integrity" '
       index($0, target) && index($0, "= {") { in_block=1; print; next }
       in_block && /hash = "/ {
         sub(/hash = "[^"]*"/, "hash = \"" val "\"")
@@ -171,8 +171,8 @@ _fix_native_hashes() {
       }
       { print }
     ' "$NIX_FILE" >"${NIX_FILE}.tmp" && mv "${NIX_FILE}.tmp" "$NIX_FILE"
-    ok "${nix_system}: ${integrity:0:40}…"
-  done
+		ok "${nix_system}: ${integrity:0:40}…"
+	done
 }
 
 # ---------------------------------------------------------------------------
