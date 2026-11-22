@@ -330,6 +330,21 @@
         Stop after the report and wait for me to say which fixes to apply.
       '';
 
+      # Appended to CLAUDE.md for the frontrow profile only.
+      frontrowClaudeMd = ''
+
+        ## Dev Team
+
+        When a prompt mentions the **dev team**, run the work as a tandem of two
+        subagents, both Opus unless I name another model:
+
+        - **Implementer** — makes the change.
+        - **QA** — independently verifies it against the ask (tests, review, running it)
+          and reports defects back to the implementer; iterate until QA passes.
+
+        Give QA the ask and the diff, not the implementer's conclusions.
+      '';
+
       # home.file entries, relative to each profile's configDir.
       claudeUserFiles = {
         "CLAUDE.md".text = claudeMd;
@@ -484,7 +499,9 @@
           tools = claudeTools // {
             DesignSync = true;
           };
-          files = claudeUserFiles;
+          files = claudeUserFiles // {
+            "CLAUDE.md".text = claudeMd + frontrowClaudeMd;
+          };
         };
       };
 
