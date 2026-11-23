@@ -10,6 +10,11 @@
 # everything else Claude writes (permissions.allow, model, hooks) is left alone.
 # Removing a key here does NOT remove it from the file; set it to false instead.
 #
+# `autoMode` (allow / soft_deny / environment) is deliberately left unmanaged:
+# it names work-internal repos, buckets and hosts, and this repo is public. Edit
+# it in the live settings.json. Owning any `autoMode` array here would replace
+# the hand-written one wholesale on the next switch.
+#
 # Profiles are declared in ./claude-code.nix.
 {
   flake.modules.homeManager.claude-code =
